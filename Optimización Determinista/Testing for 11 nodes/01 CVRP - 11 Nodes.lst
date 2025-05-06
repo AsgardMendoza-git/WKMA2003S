@@ -1,0 +1,1798 @@
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 1
+Random test for Capacitated Vehicle Routing Problem
+C o m p i l a t i o n
+
+
+   2   
+   3  Set
+   4     i    'nodes'      /depot, K1*K10/
+   5     k    'vehicles'   /T1*T6/;
+   6   
+   7  Alias(i,j);
+   8   
+   9  Parameter
+  10     a(k) 'capacity vehicle k'
+  11          /T1 100
+  12           T2 100
+  13           T3 100
+  14           T4 100
+  15           T5 100
+  16           T6 100/
+  17   
+  18     b(i) 'demand node i'
+  19          /Depot 0
+  20           K1    40
+  21           K2    56
+  22           K3    64
+  23           K4    11
+  24           K5    92
+  25           K6    38
+  26           K7    53
+  27           K8    64
+  28           K9    5
+  29           K10   75/;
+  30   
+  31  Table c(i,j) 'transport cost matrix'
+  32            depot   K1       K2     K3      K4      K5      K6      K7      K8      K9      K10
+  33  depot     99.00   8.077   6.542   2.750   1.341   3.568   5.447   2.363   1.229   4.843   6.451
+  34  K1        8.077   99.00   1.559   7.236   7.519   8.596   9.600   8.698   8.488   10.359  12.075
+  35  K2        6.542   1.559   99.00   5.710   5.960   7.104   8.542   7.312   7.014   8.888   10.628
+  36  K3        2.750   7.236   5.710   99.00   1.410   1.509   7.961   5.035   3.961   3.312   5.105
+  37  K4        1.341   7.519   5.960   1.410   99.00   2.419   6.635   3.643   2.553   3.964   5.701
+  38  K5        3.568   8.596   7.104   1.509   2.419   99.00   9.003   5.929   4.779   1.812   3.601
+  39  K6        5.447   9.600   8.542   7.961   6.635   9.003   99.00   3.135   4.288   10.234  11.715
+  40  K7        2.363   8.698   7.312   5.035   3.643   5.929   3.135   99.00   1.160   7.100   8.591
+  41  K8        1.229   8.488   7.014   3.961   2.553   4.779   4.288   1.160   99.00   5.946   7.464
+  42  K9        4.843   10.359  8.888   3.312   3.964   1.812   10.234  7.100   5.946   99.00   1.794
+  43  K10       6.451   12.075  10.628  5.105   5.701   3.601   11.715  8.591   7.464   1.794   99.00
+  44     ;
+  45   
+  46  Binary Variables
+  47     x(i,j,k) '1 if transport vehicle k drives directly from node i to node j, otherwise 0'
+  48     y(i,k)   '1 if customer i is fully supplied by transport vehicle k, otherwise 0';
+  49   
+  50  Integer Variable
+  51      u(i,k)  'Additional variable for subtour elimination';
+  52   
+  53  Variables
+  54      Z      'target value as total sum of transport costs';
+  55   
+  56  Equations
+  57      target_function                     'target function'
+  58      demand_capa_constr(k)               'demands assigned to a transport vehicle correspond to max. vehicle capacity'
+  59      depot_constr(i)                     'tours include depot as start and end'
+  60      cust_vehicle_constr(i)              'customer is assigned to exactly one transport vehicle'
+  61      node_after_constr(i,k)              'each node has one node afterwards'
+  62      node_before_const(j,k)              'each node has one node before'
+  63      subtour_elimination_constr(i,j,k)   'avoid subtours without depot'
+  64      lower_bound_subtour_constr(i,k)     'lower bound to avoid subtours without depot'
+  65      upper_bound_subtour_constr(i,k)     'upper bound to avoid subtours without depot';
+  66   
+  67  target_function..                                                                                       Z =e= sum((i,j,k), c(i,j)*x(i,j,k))+sum(i,b(i)/a('T1')*30);
+  68  demand_capa_constr(k)..                                                                                 sum(i, b(i)*y(i,k)) =l= a(k);
+  69  depot_constr(i)$((ord(i)=1))..                                                                          sum(k, y(i,k)) =e= card(k);
+  70  cust_vehicle_constr(i)$((ord(i)<>1))..                                                                  sum(k, y(i,k)) =e= 1;
+  71  node_after_constr(i,k)..                                                                                sum(j, x(i,j,k)) =e= y(i,k);
+  72  node_before_const(j,k)..                                                                                sum(i, x(i,j,k)) =e= y(j,k);
+  73  subtour_elimination_constr(i,j,k)$(not sameAs(i,j)and(ord(i)<>1)and(ord(j)<>1)and(b(i)+b(j)<=a(k)))..   u(i,k)-u(j,k)+a(k)*x(i,j,k) =l= a(k)-b(j);
+  74  lower_bound_subtour_constr(i,k)..                                                                       b(i)=l=u(i,k);
+  75  upper_bound_subtour_constr(i,k)..                                                                       u(i,k)=l=a(k) ;
+  76   
+  77  Model CVRP /all/;
+  78   
+  79  Solve CVRP using MIP minimizing Z;
+
+
+COMPILATION TIME     =        0.000 SECONDS      3 MB  46.5.0 a671108d WEX-WEI
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 2
+Random test for Capacitated Vehicle Routing Problem
+Equation Listing    SOLVE CVRP Using MIP From line 79
+
+
+---- target_function  =E=  target function
+
+target_function..  - 99*x(depot,depot,T1) - 99*x(depot,depot,T2) - 99*x(depot,depot,T3) - 99*x(depot,depot,T4) - 99*x(depot,depot,T5) - 99*x(depot,depot,T6) - 8.077*x(depot,K1,T1) - 8.077*x(depot,K1,T2) - 8.077*x(depot,K1,T3) - 8.077*x(depot,K1,T4) - 8.077*x(depot,K1,T5) - 8.077*x(depot,K1,T6) - 6.542*x(depot,K2,T1) - 6.542*x(depot,K2,T2) - 6.542*x(depot,K2,T3) - 6.542*x(depot,K2,T4) - 6.542*x(depot,K2,T5) - 6.542*x(depot,K2,T6) - 2.75*x(depot,K3,T1) - 2.75*x(depot,K3,T2) - 2.75*x(depot,K3,T3) - 2.75*x(depot,K3,T4) - 2.75*x(depot,K3,T5) - 2.75*x(depot,K3,T6) - 1.341*x(depot,K4,T1) - 1.341*x(depot,K4,T2) - 1.341*x(depot,K4,T3) - 1.341*x(depot,K4,T4) - 1.341*x(depot,K4,T5) - 1.341*x(depot,K4,T6) - 3.568*x(depot,K5,T1) - 3.568*x(depot,K5,T2) - 3.568*x(depot,K5,T3) - 3.568*x(depot,K5,T4) - 3.568*x(depot,K5,T5) - 3.568*x(depot,K5,T6) - 5.447*x(depot,K6,T1) - 5.447*x(depot,K6,T2) - 5.447*x(depot,K6,T3) - 5.447*x(depot,K6,T4) - 5.447*x(depot,K6,T5) - 5.447*x(depot,K6,T6) - 2.363*x(depot,K7,T1) - 2.363*x(depot,K7,T2) - 2.363*x(depot,K7,T3) - 2.363*x(depot,K7,T4) - 2.363*x(depot,K7,T5) - 2.363*x(depot,K7,T6) - 1.229*x(depot,K8,T1) - 1.229*x(depot,K8,T2) - 1.229*x(depot,K8,T3) - 1.229*x(depot,K8,T4) - 1.229*x(depot,K8,T5) - 1.229*x(depot,K8,T6) - 4.843*x(depot,K9,T1) - 4.843*x(depot,K9,T2) - 4.843*x(depot,K9,T3) - 4.843*x(depot,K9,T4) - 4.843*x(depot,K9,T5) - 4.843*x(depot,K9,T6) - 6.451*x(depot,K10,T1) - 6.451*x(depot,K10,T2) - 6.451*x(depot,K10,T3) - 6.451*x(depot,K10,T4) - 6.451*x(depot,K10,T5) - 6.451*x(depot,K10,T6) - 8.077*x(K1,depot,T1) - 8.077*x(K1,depot,T2) - 8.077*x(K1,depot,T3) - 8.077*x(K1,depot,T4) - 8.077*x(K1,depot,T5) - 8.077*x(K1,depot,T6) - 99*x(K1,K1,T1) - 99*x(K1,K1,T2) - 99*x(K1,K1,T3) - 99*x(K1,K1,T4) - 99*x(K1,K1,T5) - 99*x(K1,K1,T6) - 1.559*x(K1,K2,T1) - 1.559*x(K1,K2,T2) - 1.559*x(K1,K2,T3) - 1.559*x(K1,K2,T4) - 1.559*x(K1,K2,T5) - 1.559*x(K1,K2,T6) - 7.236*x(K1,K3,T1) - 7.236*x(K1,K3,T2) - 7.236*x(K1,K3,T3) - 7.236*x(K1,K3,T4) - 7.236*x(K1,K3,T5) - 7.236*x(K1,K3,T6) - 7.519*x(K1,K4,T1) - 7.519*x(K1,K4,T2) - 7.519*x(K1,K4,T3) - 7.519*x(K1,K4,T4) - 7.519*x(K1,K4,T5) - 7.519*x(K1,K4,T6) - 8.596*x(K1,K5,T1) - 8.596*x(K1,K5,T2) - 8.596*x(K1,K5,T3) - 8.596*x(K1,K5,T4) - 8.596*x(K1,K5,T5) - 8.596*x(K1,K5,T6) - 9.6*x(K1,K6,T1) - 9.6*x(K1,K6,T2) - 9.6*x(K1,K6,T3) - 9.6*x(K1,K6,T4) - 9.6*x(K1,K6,T5) - 9.6*x(K1,K6,T6) - 8.698*x(K1,K7,T1) - 8.698*x(K1,K7,T2) - 8.698*x(K1,K7,T3) - 8.698*x(K1,K7,T4) - 8.698*x(K1,K7,T5) - 8.698*x(K1,K7,T6) - 8.488*x(K1,K8,T1) - 8.488*x(K1,K8,T2) - 8.488*x(K1,K8,T3) - 8.488*x(K1,K8,T4) - 8.488*x(K1,K8,T5) - 8.488*x(K1,K8,T6) - 10.359*x(K1,K9,T1) - 10.359*x(K1,K9,T2) - 10.359*x(K1,K9,T3) - 10.359*x(K1,K9,T4) - 10.359*x(K1,K9,T5) - 10.359*x(K1,K9,T6) - 12.075*x(K1,K10,T1) - 12.075*x(K1,K10,T2) - 12.075*x(K1,K10,T3) - 12.075*x(K1,K10,T4) - 12.075*x(K1,K10,T5) - 12.075*x(K1,K10,T6) - 6.542*x(K2,depot,T1) - 6.542*x(K2,depot,T2) - 6.542*x(K2,depot,T3) - 6.542*x(K2,depot,T4) - 6.542*x(K2,depot,T5) - 6.542*x(K2,depot,T6) - 1.559*x(K2,K1,T1) - 1.559*x(K2,K1,T2) - 1.559*x(K2,K1,T3) - 1.559*x(K2,K1,T4) - 1.559*x(K2,K1,T5) - 1.559*x(K2,K1,T6) - 99*x(K2,K2,T1) - 99*x(K2,K2,T2) - 99*x(K2,K2,T3) - 99*x(K2,K2,T4) - 99*x(K2,K2,T5) - 99*x(K2,K2,T6) - 5.71*x(K2,K3,T1) - 5.71*x(K2,K3,T2) - 5.71*x(K2,K3,T3) - 5.71*x(K2,K3,T4) - 5.71*x(K2,K3,T5) - 5.71*x(K2,K3,T6) - 5.96*x(K2,K4,T1) - 5.96*x(K2,K4,T2) - 5.96*x(K2,K4,T3) - 5.96*x(K2,K4,T4) - 5.96*x(K2,K4,T5) - 5.96*x(K2,K4,T6) - 7.104*x(K2,K5,T1) - 7.104*x(K2,K5,T2) - 7.104*x(K2,K5,T3) - 7.104*x(K2,K5,T4) - 7.104*x(K2,K5,T5) - 7.104*x(K2,K5,T6) - 8.542*x(K2,K6,T1) - 8.542*x(K2,K6,T2) - 8.542*x(K2,K6,T3) - 8.542*x(K2,K6,T4) - 8.542*x(K2,K6,T5) - 8.542*x(K2,K6,T6) - 7.312*x(K2,K7,T1) - 7.312*x(K2,K7,T2) - 7.312*x(K2,K7,T3) - 7.312*x(K2,K7,T4) - 7.312*x(K2,K7,T5) - 7.312*x(K2,K7,T6) - 7.014*x(K2,K8,T1) - 7.014*x(K2,K8,T2) - 7.014*x(K2,K8,T3) - 7.014*x(K2,K8,T4) - 7.014*x(K2,K8,T5) - 7.014*x(K2,K8,T6) - 8.888*x(K2,K9,T1) - 8.888*x(K2,K9,T2) - 8.888*x(K2,K9,T3) - 8.888*x(K2,K9,T4) - 8.888*x(K2,K9,T5) - 8.888*x(K2,K9,T6) - 10.628*x(K2,K10,T1) - 10.628*x(K2,K10,T2) - 10.628*x(K2,K10,T3) - 10.628*x(K2,K10,T4) - 10.628*x(K2,K10,T5) - 10.628*x(K2,K10,T6) - 2.75*x(K3,depot,T1) - 2.75*x(K3,depot,T2) - 2.75*x(K3,depot,T3) - 2.75*x(K3,depot,T4) - 2.75*x(K3,depot,T5) - 2.75*x(K3,depot,T6) - 7.236*x(K3,K1,T1) - 7.236*x(K3,K1,T2) - 7.236*x(K3,K1,T3) - 7.236*x(K3,K1,T4) - 7.236*x(K3,K1,T5) - 7.236*x(K3,K1,T6) - 5.71*x(K3,K2,T1) - 5.71*x(K3,K2,T2) - 5.71*x(K3,K2,T3) - 5.71*x(K3,K2,T4) - 5.71*x(K3,K2,T5) - 5.71*x(K3,K2,T6) - 99*x(K3,K3,T1) - 99*x(K3,K3,T2) - 99*x(K3,K3,T3) - 99*x(K3,K3,T4) - 99*x(K3,K3,T5) - 99*x(K3,K3,T6) - 1.41*x(K3,K4,T1) - 1.41*x(K3,K4,T2) - 1.41*x(K3,K4,T3) - 1.41*x(K3,K4,T4) - 1.41*x(K3,K4,T5) - 1.41*x(K3,K4,T6) - 1.509*x(K3,K5,T1) - 1.509*x(K3,K5,T2) - 1.509*x(K3,K5,T3) - 1.509*x(K3,K5,T4) - 1.509*x(K3,K5,T5) - 1.509*x(K3,K5,T6) - 7.961*x(K3,K6,T1) - 7.961*x(K3,K6,T2) - 7.961*x(K3,K6,T3) - 7.961*x(K3,K6,T4) - 7.961*x(K3,K6,T5) - 7.961*x(K3,K6,T6) - 5.035*x(K3,K7,T1) - 5.035*x(K3,K7,T2) - 5.035*x(K3,K7,T3) - 5.035*x(K3,K7,T4) - 5.035*x(K3,K7,T5) - 5.035*x(K3,K7,T6) - 3.961*x(K3,K8,T1) - 3.961*x(K3,K8,T2) - 3.961*x(K3,K8,T3) - 3.961*x(K3,K8,T4) - 3.961*x(K3,K8,T5) - 3.961*x(K3,K8,T6) - 3.312*x(K3,K9,T1) - 3.312*x(K3,K9,T2) - 3.312*x(K3,K9,T3) - 3.312*x(K3,K9,T4) - 3.312*x(K3,K9,T5) - 3.312*x(K3,K9,T6) - 5.105*x(K3,K10,T1) - 5.105*x(K3,K10,T2) - 5.105*x(K3,K10,T3) - 5.105*x(K3,K10,T4) - 5.105*x(K3,K10,T5) - 5.105*x(K3,K10,T6) - 1.341*x(K4,depot,T1) - 1.341*x(K4,depot,T2) - 1.341*x(K4,depot,T3) - 1.341*x(K4,depot,T4) - 1.341*x(K4,depot,T5) - 1.341*x(K4,depot,T6) - 7.519*x(K4,K1,T1) - 7.519*x(K4,K1,T2) - 7.519*x(K4,K1,T3) - 7.519*x(K4,K1,T4) - 7.519*x(K4,K1,T5) - 7.519*x(K4,K1,T6) - 5.96*x(K4,K2,T1) - 5.96*x(K4,K2,T2) - 5.96*x(K4,K2,T3) - 5.96*x(K4,K2,T4) - 5.96*x(K4,K2,T5) - 5.96*x(K4,K2,T6) - 1.41*x(K4,K3,T1) - 1.41*x(K4,K3,T2) - 1.41*x(K4,K3,T3) - 1.41*x(K4,K3,T4) - 1.41*x(K4,K3,T5) - 1.41*x(K4,K3,T6) - 99*x(K4,K4,T1) - 99*x(K4,K4,T2) - 99*x(K4,K4,T3) - 99*x(K4,K4,T4) - 99*x(K4,K4,T5) - 99*x(K4,K4,T6) - 2.419*x(K4,K5,T1) - 2.419*x(K4,K5,T2) - 2.419*x(K4,K5,T3) - 2.419*x(K4,K5,T4) - 2.419*x(K4,K5,T5) - 2.419*x(K4,K5,T6) - 6.635*x(K4,K6,T1) - 6.635*x(K4,K6,T2) - 6.635*x(K4,K6,T3) - 6.635*x(K4,K6,T4) - 6.635*x(K4,K6,T5) - 6.635*x(K4,K6,T6) - 3.643*x(K4,K7,T1) - 3.643*x(K4,K7,T2) - 3.643*x(K4,K7,T3) - 3.643*x(K4,K7,T4) - 3.643*x(K4,K7,T5) - 3.643*x(K4,K7,T6) - 2.553*x(K4,K8,T1) - 2.553*x(K4,K8,T2) - 2.553*x(K4,K8,T3) - 2.553*x(K4,K8,T4) - 2.553*x(K4,K8,T5) - 2.553*x(K4,K8,T6) - 3.964*x(K4,K9,T1) - 3.964*x(K4,K9,T2) - 3.964*x(K4,K9,T3) - 3.964*x(K4,K9,T4) - 3.964*x(K4,K9,T5) - 3.964*x(K4,K9,T6) - 5.701*x(K4,K10,T1) - 5.701*x(K4,K10,T2) - 5.701*x(K4,K10,T3) - 5.701*x(K4,K10,T4) - 5.701*x(K4,K10,T5) - 5.701*x(K4,K10,T6) - 3.568*x(K5,depot,T1) - 3.568*x(K5,depot,T2) - 3.568*x(K5,depot,T3) - 3.568*x(K5,depot,T4) - 3.568*x(K5,depot,T5) - 3.568*x(K5,depot,T6) - 8.596*x(K5,K1,T1) - 8.596*x(K5,K1,T2) - 8.596*x(K5,K1,T3) - 8.596*x(K5,K1,T4) - 8.596*x(K5,K1,T5) - 8.596*x(K5,K1,T6) - 7.104*x(K5,K2,T1) - 7.104*x(K5,K2,T2) - 7.104*x(K5,K2,T3) - 7.104*x(K5,K2,T4) - 7.104*x(K5,K2,T5) - 7.104*x(K5,K2,T6) - 1.509*x(K5,K3,T1) - 1.509*x(K5,K3,T2) - 1.509*x(K5,K3,T3) - 1.509*x(K5,K3,T4) - 1.509*x(K5,K3,T5) - 1.509*x(K5,K3,T6) - 2.419*x(K5,K4,T1) - 2.419*x(K5,K4,T2) - 2.419*x(K5,K4,T3) - 2.419*x(K5,K4,T4) - 2.419*x(K5,K4,T5) - 2.419*x(K5,K4,T6) - 99*x(K5,K5,T1) - 99*x(K5,K5,T2) - 99*x(K5,K5,T3) - 99*x(K5,K5,T4) - 99*x(K5,K5,T5) - 99*x(K5,K5,T6) - 9.003*x(K5,K6,T1) - 9.003*x(K5,K6,T2) - 9.003*x(K5,K6,T3) - 9.003*x(K5,K6,T4) - 9.003*x(K5,K6,T5) - 9.003*x(K5,K6,T6) - 5.929*x(K5,K7,T1) - 5.929*x(K5,K7,T2) - 5.929*x(K5,K7,T3) - 5.929*x(K5,K7,T4) - 5.929*x(K5,K7,T5) - 5.929*x(K5,K7,T6) - 4.779*x(K5,K8,T1) - 4.779*x(K5,K8,T2) - 4.779*x(K5,K8,T3) - 4.779*x(K5,K8,T4) - 4.779*x(K5,K8,T5) - 4.779*x(K5,K8,T6) - 1.812*x(K5,K9,T1) - 1.812*x(K5,K9,T2) - 1.812*x(K5,K9,T3) - 1.812*x(K5,K9,T4) - 1.812*x(K5,K9,T5) - 1.812*x(K5,K9,T6) - 3.601*x(K5,K10,T1) - 3.601*x(K5,K10,T2) - 3.601*x(K5,K10,T3) - 3.601*x(K5,K10,T4) - 3.601*x(K5,K10,T5) - 3.601*x(K5,K10,T6) - 5.447*x(K6,depot,T1) - 5.447*x(K6,depot,T2) - 5.447*x(K6,depot,T3) - 5.447*x(K6,depot,T4) - 5.447*x(K6,depot,T5) - 5.447*x(K6,depot,T6) - 9.6*x(K6,K1,T1) - 9.6*x(K6,K1,T2) - 9.6*x(K6,K1,T3) - 9.6*x(K6,K1,T4) - 9.6*x(K6,K1,T5) - 9.6*x(K6,K1,T6) - 8.542*x(K6,K2,T1) - 8.542*x(K6,K2,T2) - 8.542*x(K6,K2,T3) - 8.542*x(K6,K2,T4) - 8.542*x(K6,K2,T5) - 8.542*x(K6,K2,T6) - 7.961*x(K6,K3,T1) - 7.961*x(K6,K3,T2) - 7.961*x(K6,K3,T3) - 7.961*x(K6,K3,T4) - 7.961*x(K6,K3,T5) - 7.961*x(K6,K3,T6) - 6.635*x(K6,K4,T1) - 6.635*x(K6,K4,T2) - 6.635*x(K6,K4,T3) - 6.635*x(K6,K4,T4) - 6.635*x(K6,K4,T5) - 6.635*x(K6,K4,T6) - 9.003*x(K6,K5,T1) - 9.003*x(K6,K5,T2) - 9.003*x(K6,K5,T3) - 9.003*x(K6,K5,T4) - 9.003*x(K6,K5,T5) - 9.003*x(K6,K5,T6) - 99*x(K6,K6,T1) - 99*x(K6,K6,T2) - 99*x(K6,K6,T3) - 99*x(K6,K6,T4) - 99*x(K6,K6,T5) - 99*x(K6,K6,T6) - 3.135*x(K6,K7,T1) - 3.135*x(K6,K7,T2) - 3.135*x(K6,K7,T3) - 3.135*x(K6,K7,T4) - 3.135*x(K6,K7,T5) - 3.135*x(K6,K7,T6) - 4.288*x(K6,K8,T1) - 4.288*x(K6,K8,T2) - 4.288*x(K6,K8,T3) - 4.288*x(K6,K8,T4) - 4.288*x(K6,K8,T5) - 4.288*x(K6,K8,T6) - 10.234*x(K6,K9,T1) - 10.234*x(K6,K9,T2) - 10.234*x(K6,K9,T3) - 10.234*x(K6,K9,T4) - 10.234*x(K6,K9,T5) - 10.234*x(K6,K9,T6) - 11.715*x(K6,K10,T1) - 11.715*x(K6,K10,T2) - 11.715*x(K6,K10,T3) - 11.715*x(K6,K10,T4) - 11.715*x(K6,K10,T5) - 11.715*x(K6,K10,T6) - 2.363*x(K7,depot,T1) - 2.363*x(K7,depot,T2) - 2.363*x(K7,depot,T3) - 2.363*x(K7,depot,T4) - 2.363*x(K7,depot,T5) - 2.363*x(K7,depot,T6) - 8.698*x(K7,K1,T1) - 8.698*x(K7,K1,T2) - 8.698*x(K7,K1,T3) - 8.698*x(K7,K1,T4) - 8.698*x(K7,K1,T5) - 8.698*x(K7,K1,T6) - 7.312*x(K7,K2,T1) - 7.312*x(K7,K2,T2) - 7.312*x(K7,K2,T3) - 7.312*x(K7,K2,T4) - 7.312*x(K7,K2,T5) - 7.312*x(K7,K2,T6) - 5.035*x(K7,K3,T1) - 5.035*x(K7,K3,T2) - 5.035*x(K7,K3,T3) - 5.035*x(K7,K3,T4) - 5.035*x(K7,K3,T5) - 5.035*x(K7,K3,T6) - 3.643*x(K7,K4,T1) - 3.643*x(K7,K4,T2) - 3.643*x(K7,K4,T3) - 3.643*x(K7,K4,T4) - 3.643*x(K7,K4,T5) - 3.643*x(K7,K4,T6) - 5.929*x(K7,K5,T1) - 5.929*x(K7,K5,T2) - 5.929*x(K7,K5,T3) - 5.929*x(K7,K5,T4) - 5.929*x(K7,K5,T5) - 5.929*x(K7,K5,T6) - 3.135*x(K7,K6,T1) - 3.135*x(K7,K6,T2) - 3.135*x(K7,K6,T3) - 3.135*x(K7,K6,T4) - 3.135*x(K7,K6,T5) - 3.135*x(K7,K6,T6) - 99*x(K7,K7,T1) - 99*x(K7,K7,T2) - 99*x(K7,K7,T3) - 99*x(K7,K7,T4) - 99*x(K7,K7,T5) - 99*x(K7,K7,T6) - 1.16*x(K7,K8,T1) - 1.16*x(K7,K8,T2) - 1.16*x(K7,K8,T3) - 1.16*x(K7,K8,T4) - 1.16*x(K7,K8,T5) - 1.16*x(K7,K8,T6) - 7.1*x(K7,K9,T1) - 7.1*x(K7,K9,T2) - 7.1*x(K7,K9,T3) - 7.1*x(K7,K9,T4) - 7.1*x(K7,K9,T5) - 7.1*x(K7,K9,T6) - 8.591*x(K7,K10,T1) - 8.591*x(K7,K10,T2) - 8.591*x(K7,K10,T3) - 8.591*x(K7,K10,T4) - 8.591*x(K7,K10,T5) - 8.591*x(K7,K10,T6) - 1.229*x(K8,depot,T1) - 1.229*x(K8,depot,T2) - 1.229*x(K8,depot,T3) - 1.229*x(K8,depot,T4) - 1.229*x(K8,depot,T5) - 1.229*x(K8,depot,T6) - 8.488*x(K8,K1,T1) - 8.488*x(K8,K1,T2) - 8.488*x(K8,K1,T3) - 8.488*x(K8,K1,T4) - 8.488*x(K8,K1,T5) - 8.488*x(K8,K1,T6) - 7.014*x(K8,K2,T1) - 7.014*x(K8,K2,T2) - 7.014*x(K8,K2,T3) - 7.014*x(K8,K2,T4) - 7.014*x(K8,K2,T5) - 7.014*x(K8,K2,T6) - 3.961*x(K8,K3,T1) - 3.961*x(K8,K3,T2) - 3.961*x(K8,K3,T3) - 3.961*x(K8,K3,T4) - 3.961*x(K8,K3,T5) - 3.961*x(K8,K3,T6) - 2.553*x(K8,K4,T1) - 2.553*x(K8,K4,T2) - 2.553*x(K8,K4,T3) - 2.553*x(K8,K4,T4) - 2.553*x(K8,K4,T5) - 2.553*x(K8,K4,T6) - 4.779*x(K8,K5,T1) - 4.779*x(K8,K5,T2) - 4.779*x(K8,K5,T3) - 4.779*x(K8,K5,T4) - 4.779*x(K8,K5,T5) - 4.779*x(K8,K5,T6) - 4.288*x(K8,K6,T1) - 4.288*x(K8,K6,T2) - 4.288*x(K8,K6,T3) - 4.288*x(K8,K6,T4) - 4.288*x(K8,K6,T5) - 4.288*x(K8,K6,T6) - 1.16*x(K8,K7,T1) - 1.16*x(K8,K7,T2) - 1.16*x(K8,K7,T3) - 1.16*x(K8,K7,T4) - 1.16*x(K8,K7,T5) - 1.16*x(K8,K7,T6) - 99*x(K8,K8,T1) - 99*x(K8,K8,T2) - 99*x(K8,K8,T3) - 99*x(K8,K8,T4) - 99*x(K8,K8,T5) - 99*x(K8,K8,T6) - 5.946*x(K8,K9,T1) - 5.946*x(K8,K9,T2) - 5.946*x(K8,K9,T3) - 5.946*x(K8,K9,T4) - 5.946*x(K8,K9,T5) - 5.946*x(K8,K9,T6) - 7.464*x(K8,K10,T1) - 7.464*x(K8,K10,T2) - 7.464*x(K8,K10,T3) - 7.464*x(K8,K10,T4) - 7.464*x(K8,K10,T5) - 7.464*x(K8,K10,T6) - 4.843*x(K9,depot,T1) - 4.843*x(K9,depot,T2) - 4.843*x(K9,depot,T3) - 4.843*x(K9,depot,T4) - 4.843*x(K9,depot,T5) - 4.843*x(K9,depot,T6) - 10.359*x(K9,K1,T1) - 10.359*x(K9,K1,T2) - 10.359*x(K9,K1,T3) - 10.359*x(K9,K1,T4) - 10.359*x(K9,K1,T5) - 10.359*x(K9,K1,T6) - 8.888*x(K9,K2,T1) - 8.888*x(K9,K2,T2) - 8.888*x(K9,K2,T3) - 8.888*x(K9,K2,T4) - 8.888*x(K9,K2,T5) - 8.888*x(K9,K2,T6) - 3.312*x(K9,K3,T1) - 3.312*x(K9,K3,T2) - 3.312*x(K9,K3,T3) - 3.312*x(K9,K3,T4) - 3.312*x(K9,K3,T5) - 3.312*x(K9,K3,T6) - 3.964*x(K9,K4,T1) - 3.964*x(K9,K4,T2) - 3.964*x(K9,K4,T3) - 3.964*x(K9,K4,T4) - 3.964*x(K9,K4,T5) - 3.964*x(K9,K4,T6) - 1.812*x(K9,K5,T1) - 1.812*x(K9,K5,T2) - 1.812*x(K9,K5,T3) - 1.812*x(K9,K5,T4) - 1.812*x(K9,K5,T5) - 1.812*x(K9,K5,T6) - 10.234*x(K9,K6,T1) - 10.234*x(K9,K6,T2) - 10.234*x(K9,K6,T3) - 10.234*x(K9,K6,T4) - 10.234*x(K9,K6,T5) - 10.234*x(K9,K6,T6) - 7.1*x(K9,K7,T1) - 7.1*x(K9,K7,T2) - 7.1*x(K9,K7,T3) - 7.1*x(K9,K7,T4) - 7.1*x(K9,K7,T5) - 7.1*x(K9,K7,T6) - 5.946*x(K9,K8,T1) - 5.946*x(K9,K8,T2) - 5.946*x(K9,K8,T3) - 5.946*x(K9,K8,T4) - 5.946*x(K9,K8,T5) - 5.946*x(K9,K8,T6) - 99*x(K9,K9,T1) - 99*x(K9,K9,T2) - 99*x(K9,K9,T3) - 99*x(K9,K9,T4) - 99*x(K9,K9,T5) - 99*x(K9,K9,T6) - 1.794*x(K9,K10,T1) - 1.794*x(K9,K10,T2) - 1.794*x(K9,K10,T3) - 1.794*x(K9,K10,T4) - 1.794*x(K9,K10,T5) - 1.794*x(K9,K10,T6) - 6.451*x(K10,depot,T1) - 6.451*x(K10,depot,T2) - 6.451*x(K10,depot,T3) - 6.451*x(K10,depot,T4) - 6.451*x(K10,depot,T5) - 6.451*x(K10,depot,T6) - 12.075*x(K10,K1,T1) - 12.075*x(K10,K1,T2) - 12.075*x(K10,K1,T3) - 12.075*x(K10,K1,T4) - 12.075*x(K10,K1,T5) - 12.075*x(K10,K1,T6) - 10.628*x(K10,K2,T1) - 10.628*x(K10,K2,T2) - 10.628*x(K10,K2,T3) - 10.628*x(K10,K2,T4) - 10.628*x(K10,K2,T5) - 10.628*x(K10,K2,T6) - 5.105*x(K10,K3,T1) - 5.105*x(K10,K3,T2) - 5.105*x(K10,K3,T3) - 5.105*x(K10,K3,T4) - 5.105*x(K10,K3,T5) - 5.105*x(K10,K3,T6) - 5.701*x(K10,K4,T1) - 5.701*x(K10,K4,T2) - 5.701*x(K10,K4,T3) - 5.701*x(K10,K4,T4) - 5.701*x(K10,K4,T5) - 5.701*x(K10,K4,T6) - 3.601*x(K10,K5,T1) - 3.601*x(K10,K5,T2) - 3.601*x(K10,K5,T3) - 3.601*x(K10,K5,T4) - 3.601*x(K10,K5,T5) - 3.601*x(K10,K5,T6) - 11.715*x(K10,K6,T1) - 11.715*x(K10,K6,T2) - 11.715*x(K10,K6,T3) - 11.715*x(K10,K6,T4) - 11.715*x(K10,K6,T5) - 11.715*x(K10,K6,T6) - 8.591*x(K10,K7,T1) - 8.591*x(K10,K7,T2) - 8.591*x(K10,K7,T3) - 8.591*x(K10,K7,T4) - 8.591*x(K10,K7,T5) - 8.591*x(K10,K7,T6) - 7.464*x(K10,K8,T1) - 7.464*x(K10,K8,T2) - 7.464*x(K10,K8,T3) - 7.464*x(K10,K8,T4) - 7.464*x(K10,K8,T5) - 7.464*x(K10,K8,T6) - 1.794*x(K10,K9,T1) - 1.794*x(K10,K9,T2) - 1.794*x(K10,K9,T3) - 1.794*x(K10,K9,T4) - 1.794*x(K10,K9,T5) - 1.794*x(K10,K9,T6) - 99*x(K10,K10,T1) - 99*x(K10,K10,T2) - 99*x(K10,K10,T3) - 99*x(K10,K10,T4) - 99*x(K10,K10,T5) - 99*x(K10,K10,T6) + Z =E= 149.4 ; (LHS = 0, INFES = 149.4 ****)
+     
+
+---- demand_capa_constr  =L=  demands assigned to a transport vehicle correspond to max. vehicle capacity
+
+demand_capa_constr(T1)..  40*y(K1,T1) + 56*y(K2,T1) + 64*y(K3,T1) + 11*y(K4,T1) + 92*y(K5,T1) + 38*y(K6,T1) + 53*y(K7,T1) + 64*y(K8,T1) + 5*y(K9,T1) + 75*y(K10,T1) =L= 100 ; (LHS = 0)
+     
+demand_capa_constr(T2)..  40*y(K1,T2) + 56*y(K2,T2) + 64*y(K3,T2) + 11*y(K4,T2) + 92*y(K5,T2) + 38*y(K6,T2) + 53*y(K7,T2) + 64*y(K8,T2) + 5*y(K9,T2) + 75*y(K10,T2) =L= 100 ; (LHS = 0)
+     
+demand_capa_constr(T3)..  40*y(K1,T3) + 56*y(K2,T3) + 64*y(K3,T3) + 11*y(K4,T3) + 92*y(K5,T3) + 38*y(K6,T3) + 53*y(K7,T3) + 64*y(K8,T3) + 5*y(K9,T3) + 75*y(K10,T3) =L= 100 ; (LHS = 0)
+     
+REMAINING 3 ENTRIES SKIPPED
+
+
+---- depot_constr  =E=  tours include depot as start and end
+
+depot_constr(depot)..  y(depot,T1) + y(depot,T2) + y(depot,T3) + y(depot,T4) + y(depot,T5) + y(depot,T6) =E= 6 ; (LHS = 0, INFES = 6 ****)
+     
+
+---- cust_vehicle_constr  =E=  customer is assigned to exactly one transport vehicle
+
+cust_vehicle_constr(K1)..  y(K1,T1) + y(K1,T2) + y(K1,T3) + y(K1,T4) + y(K1,T5) + y(K1,T6) =E= 1 ; (LHS = 0, INFES = 1 ****)
+     
+cust_vehicle_constr(K2)..  y(K2,T1) + y(K2,T2) + y(K2,T3) + y(K2,T4) + y(K2,T5) + y(K2,T6) =E= 1 ; (LHS = 0, INFES = 1 ****)
+     
+cust_vehicle_constr(K3)..  y(K3,T1) + y(K3,T2) + y(K3,T3) + y(K3,T4) + y(K3,T5) + y(K3,T6) =E= 1 ; (LHS = 0, INFES = 1 ****)
+     
+REMAINING 7 ENTRIES SKIPPED
+
+
+---- node_after_constr  =E=  each node has one node afterwards
+
+node_after_constr(depot,T1)..  x(depot,depot,T1) + x(depot,K1,T1) + x(depot,K2,T1) + x(depot,K3,T1) + x(depot,K4,T1) + x(depot,K5,T1) + x(depot,K6,T1) + x(depot,K7,T1) + x(depot,K8,T1) + x(depot,K9,T1) + x(depot,K10,T1) - y(depot,T1) =E= 0 ; (LHS = 0)
+     
+node_after_constr(depot,T2)..  x(depot,depot,T2) + x(depot,K1,T2) + x(depot,K2,T2) + x(depot,K3,T2) + x(depot,K4,T2) + x(depot,K5,T2) + x(depot,K6,T2) + x(depot,K7,T2) + x(depot,K8,T2) + x(depot,K9,T2) + x(depot,K10,T2) - y(depot,T2) =E= 0 ; (LHS = 0)
+     
+node_after_constr(depot,T3)..  x(depot,depot,T3) + x(depot,K1,T3) + x(depot,K2,T3) + x(depot,K3,T3) + x(depot,K4,T3) + x(depot,K5,T3) + x(depot,K6,T3) + x(depot,K7,T3) + x(depot,K8,T3) + x(depot,K9,T3) + x(depot,K10,T3) - y(depot,T3) =E= 0 ; (LHS = 0)
+     
+REMAINING 63 ENTRIES SKIPPED
+
+
+---- node_before_const  =E=  each node has one node before
+
+node_before_const(depot,T1)..  x(depot,depot,T1) + x(K1,depot,T1) + x(K2,depot,T1) + x(K3,depot,T1) + x(K4,depot,T1) + x(K5,depot,T1) + x(K6,depot,T1) + x(K7,depot,T1) + x(K8,depot,T1) + x(K9,depot,T1) + x(K10,depot,T1) - y(depot,T1) =E= 0 ; (LHS = 0)
+     
+node_before_const(depot,T2)..  x(depot,depot,T2) + x(K1,depot,T2) + x(K2,depot,T2) + x(K3,depot,T2) + x(K4,depot,T2) + x(K5,depot,T2) + x(K6,depot,T2) + x(K7,depot,T2) + x(K8,depot,T2) + x(K9,depot,T2) + x(K10,depot,T2) - y(depot,T2) =E= 0 ; (LHS = 0)
+     
+node_before_const(depot,T3)..  x(depot,depot,T3) + x(K1,depot,T3) + x(K2,depot,T3) + x(K3,depot,T3) + x(K4,depot,T3) + x(K5,depot,T3) + x(K6,depot,T3) + x(K7,depot,T3) + x(K8,depot,T3) + x(K9,depot,T3) + x(K10,depot,T3) - y(depot,T3) =E= 0 ; (LHS = 0)
+     
+REMAINING 63 ENTRIES SKIPPED
+
+
+---- subtour_elimination_constr  =L=  avoid subtours without depot
+
+subtour_elimination_constr(K1,K2,T1)..  100*x(K1,K2,T1) + u(K1,T1) - u(K2,T1) =L= 44 ; (LHS = 0)
+     
+subtour_elimination_constr(K1,K2,T2)..  100*x(K1,K2,T2) + u(K1,T2) - u(K2,T2) =L= 44 ; (LHS = 0)
+     
+subtour_elimination_constr(K1,K2,T3)..  100*x(K1,K2,T3) + u(K1,T3) - u(K2,T3) =L= 44 ; (LHS = 0)
+     
+REMAINING 249 ENTRIES SKIPPED
+
+
+---- lower_bound_subtour_constr  =L=  lower bound to avoid subtours without depot
+
+lower_bound_subtour_constr(depot,T1)..  - u(depot,T1) =L= 0 ; (LHS = 0)
+     
+lower_bound_subtour_constr(depot,T2)..  - u(depot,T2) =L= 0 ; (LHS = 0)
+     
+lower_bound_subtour_constr(depot,T3)..  - u(depot,T3) =L= 0 ; (LHS = 0)
+     
+REMAINING 63 ENTRIES SKIPPED
+
+
+---- upper_bound_subtour_constr  =L=  upper bound to avoid subtours without depot
+
+upper_bound_subtour_constr(depot,T1)..  u(depot,T1) =L= 100 ; (LHS = 0)
+     
+upper_bound_subtour_constr(depot,T2)..  u(depot,T2) =L= 100 ; (LHS = 0)
+     
+upper_bound_subtour_constr(depot,T3)..  u(depot,T3) =L= 100 ; (LHS = 0)
+     
+REMAINING 63 ENTRIES SKIPPED
+
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 3
+Random test for Capacitated Vehicle Routing Problem
+Column Listing      SOLVE CVRP Using MIP From line 79
+
+
+---- x  1 if transport vehicle k drives directly from node i to node j, otherwise 0
+
+x(depot,depot,T1)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+      -99       target_function
+        1       node_after_constr(depot,T1)
+        1       node_before_const(depot,T1)
+
+x(depot,depot,T2)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+      -99       target_function
+        1       node_after_constr(depot,T2)
+        1       node_before_const(depot,T2)
+
+x(depot,depot,T3)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+      -99       target_function
+        1       node_after_constr(depot,T3)
+        1       node_before_const(depot,T3)
+
+REMAINING 723 ENTRIES SKIPPED
+
+---- y  1 if customer i is fully supplied by transport vehicle k, otherwise 0
+
+y(depot,T1)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+        1       depot_constr(depot)
+       -1       node_after_constr(depot,T1)
+       -1       node_before_const(depot,T1)
+
+y(depot,T2)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+        1       depot_constr(depot)
+       -1       node_after_constr(depot,T2)
+       -1       node_before_const(depot,T2)
+
+y(depot,T3)
+                (.LO, .L, .UP, .M = 0, 0, 1, 0)
+        1       depot_constr(depot)
+       -1       node_after_constr(depot,T3)
+       -1       node_before_const(depot,T3)
+
+REMAINING 63 ENTRIES SKIPPED
+
+---- u  Additional variable for subtour elimination
+
+u(depot,T1)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       lower_bound_subtour_constr(depot,T1)
+        1       upper_bound_subtour_constr(depot,T1)
+
+u(depot,T2)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       lower_bound_subtour_constr(depot,T2)
+        1       upper_bound_subtour_constr(depot,T2)
+
+u(depot,T3)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -1       lower_bound_subtour_constr(depot,T3)
+        1       upper_bound_subtour_constr(depot,T3)
+
+REMAINING 63 ENTRIES SKIPPED
+
+---- Z  target value as total sum of transport costs
+
+Z
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       target_function
+
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 4
+Random test for Capacitated Vehicle Routing Problem
+Range Statistics    SOLVE CVRP Using MIP From line 79
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 1.000E+00, 1.494E+02] - Zero values observed as well
+Bound     [min, max] : [ 1.000E+00, 1.000E+00] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.000E+02]
+
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 5
+Random test for Capacitated Vehicle Routing Problem
+Model Statistics    SOLVE CVRP Using MIP From line 79
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           9     SINGLE EQUATIONS          534
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES          859
+NON ZERO ELEMENTS         3,325     DISCRETE VARIABLES        858
+
+
+GENERATION TIME      =        0.015 SECONDS      4 MB  46.5.0 a671108d WEX-WEI
+GAMS 46.5.0  a671108d May 8, 2024           WEX-WEI x86 64bit/MS Windows - 05/06/25 09:34:45 Page 6
+Random test for Capacitated Vehicle Routing Problem
+Solution Report     SOLVE CVRP Using MIP From line 79
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   CVRP                OBJECTIVE  Z
+     TYPE    MIP                 DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  79
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE              204.7060
+
+ RESOURCE USAGE, LIMIT          0.750 10000000000.000
+ ITERATION COUNT, LIMIT       202    2147483647
+*** This solver runs with a community license. No commercial use.
+--- GMO setup time: 0.00s
+--- Space for names approximately 0.04 Mb
+--- Use option 'names no' to turn use of names off
+--- GMO memory 0.66 Mb (peak 0.67 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.02 Mb (peak 0.11 Mb)
+--- Starting Cplex
+
+
+--- MIP status (101): integer optimal solution.
+--- Cplex Time: 0.73sec (det. 56.62 ticks)
+
+--- Returning a primal only solution to GAMS (marginals all set to NA).
+--- Fixing integer variables and solving final LP...
+
+
+--- Fixed MIP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.59 ticks)
+
+
+Proven optimal solution
+MIP Solution:          204.706000    (202 iterations, 0 nodes)
+Final Solve:           204.706000    (0 iterations)
+
+Best possible:         204.706000
+Absolute gap:            0.000000
+Relative gap:            0.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU target_fu~       149.4000       149.4000       149.4000         1.0000      
+
+  target_function  target function
+
+---- EQU demand_capa_constr  demands assigned to a transport vehicle correspond to max. vehicle capacity
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+T1        -INF           91.0000       100.0000          .          
+T2        -INF           92.0000       100.0000          .          
+T3        -INF           64.0000       100.0000          .          
+T4        -INF           75.0000       100.0000          .          
+T5        -INF           96.0000       100.0000          .          
+T6        -INF           80.0000       100.0000          .          
+
+---- EQU depot_constr  tours include depot as start and end
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+depot         6.0000         6.0000         6.0000          .          
+
+---- EQU cust_vehicle_constr  customer is assigned to exactly one transport vehicle
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+K1          1.0000         1.0000         1.0000          .          
+K2          1.0000         1.0000         1.0000          .          
+K3          1.0000         1.0000         1.0000          .          
+K4          1.0000         1.0000         1.0000          .          
+K5          1.0000         1.0000         1.0000          .          
+K6          1.0000         1.0000         1.0000          .          
+K7          1.0000         1.0000         1.0000          .          
+K8          1.0000         1.0000         1.0000          .          
+K9          1.0000         1.0000         1.0000          .          
+K10         1.0000         1.0000         1.0000          .          
+
+---- EQU node_after_constr  each node has one node afterwards
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1          .              .              .              .          
+depot.T2          .              .              .              .          
+depot.T3          .              .              .              .          
+depot.T4          .              .              .              .          
+depot.T5          .              .              .              .          
+depot.T6          .              .              .              .          
+K1   .T1          .              .              .              .          
+K1   .T2          .              .              .              .          
+K1   .T3          .              .              .              .          
+K1   .T4          .              .              .              .          
+K1   .T5          .              .              .              .          
+K1   .T6          .              .              .              .          
+K2   .T1          .              .              .              .          
+K2   .T2          .              .              .              .          
+K2   .T3          .              .              .              .          
+K2   .T4          .              .              .              .          
+K2   .T5          .              .              .              .          
+K2   .T6          .              .              .              .          
+K3   .T1          .              .              .              .          
+K3   .T2          .              .              .              .          
+K3   .T3          .              .              .              .          
+K3   .T4          .              .              .              .          
+K3   .T5          .              .              .              .          
+K3   .T6          .              .              .              .          
+K4   .T1          .              .              .              .          
+K4   .T2          .              .              .              .          
+K4   .T3          .              .              .              .          
+K4   .T4          .              .              .              .          
+K4   .T5          .              .              .              .          
+K4   .T6          .              .              .              .          
+K5   .T1          .              .              .              .          
+K5   .T2          .              .              .              .          
+K5   .T3          .              .              .              .          
+K5   .T4          .              .              .              .          
+K5   .T5          .              .              .              .          
+K5   .T6          .              .              .              .          
+K6   .T1          .              .              .              .          
+K6   .T2          .              .              .              .          
+K6   .T3          .              .              .              .          
+K6   .T4          .              .              .              .          
+K6   .T5          .              .              .              .          
+K6   .T6          .              .              .              .          
+K7   .T1          .              .              .              .          
+K7   .T2          .              .              .              .          
+K7   .T3          .              .              .              .          
+K7   .T4          .              .              .              .          
+K7   .T5          .              .              .              .          
+K7   .T6          .              .              .              .          
+K8   .T1          .              .              .              .          
+K8   .T2          .              .              .              .          
+K8   .T3          .              .              .              .          
+K8   .T4          .              .              .              .          
+K8   .T5          .              .              .              .          
+K8   .T6          .              .              .              .          
+K9   .T1          .              .              .              .          
+K9   .T2          .              .              .              .          
+K9   .T3          .              .              .              .          
+K9   .T4          .              .              .              .          
+K9   .T5          .              .              .              .          
+K9   .T6          .              .              .              .          
+K10  .T1          .              .              .              .          
+K10  .T2          .              .              .              .          
+K10  .T3          .              .              .              .          
+K10  .T4          .              .              .              .          
+K10  .T5          .              .              .              .          
+K10  .T6          .              .              .              .          
+
+---- EQU node_before_const  each node has one node before
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1          .              .              .              .          
+depot.T2          .              .              .              .          
+depot.T3          .              .              .              .          
+depot.T4          .              .              .              .          
+depot.T5          .              .              .              .          
+depot.T6          .              .              .              .          
+K1   .T1          .              .              .              .          
+K1   .T2          .              .              .              .          
+K1   .T3          .              .              .              .          
+K1   .T4          .              .              .              .          
+K1   .T5          .              .              .              .          
+K1   .T6          .              .              .              .          
+K2   .T1          .              .              .              .          
+K2   .T2          .              .              .              .          
+K2   .T3          .              .              .              .          
+K2   .T4          .              .              .              .          
+K2   .T5          .              .              .              .          
+K2   .T6          .              .              .              .          
+K3   .T1          .              .              .              .          
+K3   .T2          .              .              .              .          
+K3   .T3          .              .              .              .          
+K3   .T4          .              .              .              .          
+K3   .T5          .              .              .              .          
+K3   .T6          .              .              .              .          
+K4   .T1          .              .              .              .          
+K4   .T2          .              .              .              .          
+K4   .T3          .              .              .              .          
+K4   .T4          .              .              .              .          
+K4   .T5          .              .              .              .          
+K4   .T6          .              .              .              .          
+K5   .T1          .              .              .              .          
+K5   .T2          .              .              .              .          
+K5   .T3          .              .              .              .          
+K5   .T4          .              .              .              .          
+K5   .T5          .              .              .              .          
+K5   .T6          .              .              .              .          
+K6   .T1          .              .              .              .          
+K6   .T2          .              .              .              .          
+K6   .T3          .              .              .              .          
+K6   .T4          .              .              .              .          
+K6   .T5          .              .              .              .          
+K6   .T6          .              .              .              .          
+K7   .T1          .              .              .              .          
+K7   .T2          .              .              .              .          
+K7   .T3          .              .              .              .          
+K7   .T4          .              .              .              .          
+K7   .T5          .              .              .              .          
+K7   .T6          .              .              .              .          
+K8   .T1          .              .              .              .          
+K8   .T2          .              .              .              .          
+K8   .T3          .              .              .              .          
+K8   .T4          .              .              .              .          
+K8   .T5          .              .              .              .          
+K8   .T6          .              .              .              .          
+K9   .T1          .              .              .              .          
+K9   .T2          .              .              .              .          
+K9   .T3          .              .              .              .          
+K9   .T4          .              .              .              .          
+K9   .T5          .              .              .              .          
+K9   .T6          .              .              .              .          
+K10  .T1          .              .              .              .          
+K10  .T2          .              .              .              .          
+K10  .T3          .              .              .              .          
+K10  .T4          .              .              .              .          
+K10  .T5          .              .              .              .          
+K10  .T6          .              .              .              .          
+
+---- EQU subtour_elimination_constr  avoid subtours without depot
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+K1 .K2 .T1        -INF          -16.0000        44.0000          .          
+K1 .K2 .T2        -INF          -16.0000        44.0000          .          
+K1 .K2 .T3        -INF          -16.0000        44.0000          .          
+K1 .K2 .T4        -INF           44.0000        44.0000          .          
+K1 .K2 .T5        -INF           44.0000        44.0000          .          
+K1 .K2 .T6        -INF          -16.0000        44.0000          .          
+K1 .K4 .T1        -INF           29.0000        89.0000          .          
+K1 .K4 .T2        -INF           29.0000        89.0000          .          
+K1 .K4 .T3        -INF           29.0000        89.0000          .          
+K1 .K4 .T4        -INF           89.0000        89.0000          .          
+K1 .K4 .T5        -INF           29.0000        89.0000          .          
+K1 .K4 .T6        -INF           29.0000        89.0000          .          
+K1 .K6 .T1        -INF            2.0000        62.0000          .          
+K1 .K6 .T2        -INF            2.0000        62.0000          .          
+K1 .K6 .T3        -INF            2.0000        62.0000          .          
+K1 .K6 .T4        -INF           62.0000        62.0000          .          
+K1 .K6 .T5        -INF            2.0000        62.0000          .          
+K1 .K6 .T6        -INF            2.0000        62.0000          .          
+K1 .K7 .T1        -INF          -51.0000        47.0000          .          
+K1 .K7 .T2        -INF          -13.0000        47.0000          .          
+K1 .K7 .T3        -INF          -13.0000        47.0000          .          
+K1 .K7 .T4        -INF           47.0000        47.0000          .          
+K1 .K7 .T5        -INF          -13.0000        47.0000          .          
+K1 .K7 .T6        -INF          -13.0000        47.0000          .          
+K1 .K9 .T1        -INF           35.0000        95.0000          .          
+K1 .K9 .T2        -INF           35.0000        95.0000          .          
+K1 .K9 .T3        -INF           35.0000        95.0000          .          
+K1 .K9 .T4        -INF           95.0000        95.0000          .          
+K1 .K9 .T5        -INF           35.0000        95.0000          .          
+K1 .K9 .T6        -INF           35.0000        95.0000          .          
+K2 .K1 .T1        -INF           16.0000        60.0000          .          
+K2 .K1 .T2        -INF           16.0000        60.0000          .          
+K2 .K1 .T3        -INF           16.0000        60.0000          .          
+K2 .K1 .T4        -INF          -44.0000        60.0000          .          
+K2 .K1 .T5        -INF           56.0000        60.0000          .          
+K2 .K1 .T6        -INF           16.0000        60.0000          .          
+K2 .K4 .T1        -INF           45.0000        89.0000          .          
+K2 .K4 .T2        -INF           45.0000        89.0000          .          
+K2 .K4 .T3        -INF           45.0000        89.0000          .          
+K2 .K4 .T4        -INF           45.0000        89.0000          .          
+K2 .K4 .T5        -INF           85.0000        89.0000          .          
+K2 .K4 .T6        -INF           45.0000        89.0000          .          
+K2 .K6 .T1        -INF           18.0000        62.0000          .          
+K2 .K6 .T2        -INF           18.0000        62.0000          .          
+K2 .K6 .T3        -INF           18.0000        62.0000          .          
+K2 .K6 .T4        -INF           18.0000        62.0000          .          
+K2 .K6 .T5        -INF           58.0000        62.0000          .          
+K2 .K6 .T6        -INF           18.0000        62.0000          .          
+K2 .K9 .T1        -INF           51.0000        95.0000          .          
+K2 .K9 .T2        -INF           51.0000        95.0000          .          
+K2 .K9 .T3        -INF           51.0000        95.0000          .          
+K2 .K9 .T4        -INF           51.0000        95.0000          .          
+K2 .K9 .T5        -INF           91.0000        95.0000          .          
+K2 .K9 .T6        -INF           51.0000        95.0000          .          
+K3 .K4 .T1        -INF           53.0000        89.0000          .          
+K3 .K4 .T2        -INF           53.0000        89.0000          .          
+K3 .K4 .T3        -INF           53.0000        89.0000          .          
+K3 .K4 .T4        -INF           64.0000        89.0000          .          
+K3 .K4 .T5        -INF           53.0000        89.0000          .          
+K3 .K4 .T6        -INF           53.0000        89.0000          .          
+K3 .K9 .T1        -INF           59.0000        95.0000          .          
+K3 .K9 .T2        -INF           59.0000        95.0000          .          
+K3 .K9 .T3        -INF           59.0000        95.0000          .          
+K3 .K9 .T4        -INF           70.0000        95.0000          .          
+K3 .K9 .T5        -INF           59.0000        95.0000          .          
+K3 .K9 .T6        -INF           59.0000        95.0000          .          
+K4 .K1 .T1        -INF          -29.0000        60.0000          .          
+K4 .K1 .T2        -INF          -29.0000        60.0000          .          
+K4 .K1 .T3        -INF          -29.0000        60.0000          .          
+K4 .K1 .T4        -INF          -89.0000        60.0000          .          
+K4 .K1 .T5        -INF          -29.0000        60.0000          .          
+K4 .K1 .T6        -INF          -29.0000        60.0000          .          
+K4 .K2 .T1        -INF          -45.0000        44.0000          .          
+K4 .K2 .T2        -INF          -45.0000        44.0000          .          
+K4 .K2 .T3        -INF          -45.0000        44.0000          .          
+K4 .K2 .T4        -INF          -45.0000        44.0000          .          
+K4 .K2 .T5        -INF          -85.0000        44.0000          .          
+K4 .K2 .T6        -INF          -45.0000        44.0000          .          
+K4 .K3 .T1        -INF          -53.0000        36.0000          .          
+K4 .K3 .T2        -INF          -53.0000        36.0000          .          
+K4 .K3 .T3        -INF          -53.0000        36.0000          .          
+K4 .K3 .T4        -INF           36.0000        36.0000          .          
+K4 .K3 .T5        -INF          -53.0000        36.0000          .          
+K4 .K3 .T6        -INF          -53.0000        36.0000          .          
+K4 .K6 .T1        -INF          -27.0000        62.0000          .          
+K4 .K6 .T2        -INF          -27.0000        62.0000          .          
+K4 .K6 .T3        -INF          -27.0000        62.0000          .          
+K4 .K6 .T4        -INF          -27.0000        62.0000          .          
+K4 .K6 .T5        -INF          -27.0000        62.0000          .          
+K4 .K6 .T6        -INF          -27.0000        62.0000          .          
+K4 .K7 .T1        -INF          -80.0000        47.0000          .          
+K4 .K7 .T2        -INF          -42.0000        47.0000          .          
+K4 .K7 .T3        -INF          -42.0000        47.0000          .          
+K4 .K7 .T4        -INF          -42.0000        47.0000          .          
+K4 .K7 .T5        -INF          -42.0000        47.0000          .          
+K4 .K7 .T6        -INF          -42.0000        47.0000          .          
+K4 .K8 .T1        -INF          -53.0000        36.0000          .          
+K4 .K8 .T2        -INF          -53.0000        36.0000          .          
+K4 .K8 .T3        -INF          -53.0000        36.0000          .          
+K4 .K8 .T4        -INF          -53.0000        36.0000          .          
+K4 .K8 .T5        -INF          -53.0000        36.0000          .          
+K4 .K8 .T6        -INF          -53.0000        36.0000          .          
+K4 .K9 .T1        -INF            6.0000        95.0000          .          
+K4 .K9 .T2        -INF            6.0000        95.0000          .          
+K4 .K9 .T3        -INF            6.0000        95.0000          .          
+K4 .K9 .T4        -INF            6.0000        95.0000          .          
+K4 .K9 .T5        -INF            6.0000        95.0000          .          
+K4 .K9 .T6        -INF            6.0000        95.0000          .          
+K4 .K10.T1        -INF          -64.0000        25.0000          .          
+K4 .K10.T2        -INF          -64.0000        25.0000          .          
+K4 .K10.T3        -INF          -64.0000        25.0000          .          
+K4 .K10.T4        -INF          -64.0000        25.0000          .          
+K4 .K10.T5        -INF          -64.0000        25.0000          .          
+K4 .K10.T6        -INF          -69.0000        25.0000          .          
+K5 .K9 .T1        -INF           87.0000        95.0000          .          
+K5 .K9 .T2        -INF           87.0000        95.0000          .          
+K5 .K9 .T3        -INF           87.0000        95.0000          .          
+K5 .K9 .T4        -INF           87.0000        95.0000          .          
+K5 .K9 .T5        -INF           87.0000        95.0000          .          
+K5 .K9 .T6        -INF           87.0000        95.0000          .          
+K6 .K1 .T1        -INF           -2.0000        60.0000          .          
+K6 .K1 .T2        -INF           -2.0000        60.0000          .          
+K6 .K1 .T3        -INF           -2.0000        60.0000          .          
+K6 .K1 .T4        -INF          -62.0000        60.0000          .          
+K6 .K1 .T5        -INF           -2.0000        60.0000          .          
+K6 .K1 .T6        -INF           -2.0000        60.0000          .          
+K6 .K2 .T1        -INF          -18.0000        44.0000          .          
+K6 .K2 .T2        -INF          -18.0000        44.0000          .          
+K6 .K2 .T3        -INF          -18.0000        44.0000          .          
+K6 .K2 .T4        -INF          -18.0000        44.0000          .          
+K6 .K2 .T5        -INF          -58.0000        44.0000          .          
+K6 .K2 .T6        -INF          -18.0000        44.0000          .          
+K6 .K4 .T1        -INF           27.0000        89.0000          .          
+K6 .K4 .T2        -INF           27.0000        89.0000          .          
+K6 .K4 .T3        -INF           27.0000        89.0000          .          
+K6 .K4 .T4        -INF           27.0000        89.0000          .          
+K6 .K4 .T5        -INF           27.0000        89.0000          .          
+K6 .K4 .T6        -INF           27.0000        89.0000          .          
+K6 .K7 .T1        -INF           47.0000        47.0000          .          
+K6 .K7 .T2        -INF          -15.0000        47.0000          .          
+K6 .K7 .T3        -INF          -15.0000        47.0000          .          
+K6 .K7 .T4        -INF          -15.0000        47.0000          .          
+K6 .K7 .T5        -INF          -15.0000        47.0000          .          
+K6 .K7 .T6        -INF          -15.0000        47.0000          .          
+K6 .K9 .T1        -INF           33.0000        95.0000          .          
+K6 .K9 .T2        -INF           33.0000        95.0000          .          
+K6 .K9 .T3        -INF           33.0000        95.0000          .          
+K6 .K9 .T4        -INF           33.0000        95.0000          .          
+K6 .K9 .T5        -INF           33.0000        95.0000          .          
+K6 .K9 .T6        -INF           33.0000        95.0000          .          
+K7 .K1 .T1        -INF           51.0000        60.0000          .          
+K7 .K1 .T2        -INF           13.0000        60.0000          .          
+K7 .K1 .T3        -INF           13.0000        60.0000          .          
+K7 .K1 .T4        -INF          -47.0000        60.0000          .          
+K7 .K1 .T5        -INF           13.0000        60.0000          .          
+K7 .K1 .T6        -INF           13.0000        60.0000          .          
+K7 .K4 .T1        -INF           80.0000        89.0000          .          
+K7 .K4 .T2        -INF           42.0000        89.0000          .          
+K7 .K4 .T3        -INF           42.0000        89.0000          .          
+K7 .K4 .T4        -INF           42.0000        89.0000          .          
+K7 .K4 .T5        -INF           42.0000        89.0000          .          
+K7 .K4 .T6        -INF           42.0000        89.0000          .          
+K7 .K6 .T1        -INF           53.0000        62.0000          .          
+K7 .K6 .T2        -INF           15.0000        62.0000          .          
+K7 .K6 .T3        -INF           15.0000        62.0000          .          
+K7 .K6 .T4        -INF           15.0000        62.0000          .          
+K7 .K6 .T5        -INF           15.0000        62.0000          .          
+K7 .K6 .T6        -INF           15.0000        62.0000          .          
+K7 .K9 .T1        -INF           86.0000        95.0000          .          
+K7 .K9 .T2        -INF           48.0000        95.0000          .          
+K7 .K9 .T3        -INF           48.0000        95.0000          .          
+K7 .K9 .T4        -INF           48.0000        95.0000          .          
+K7 .K9 .T5        -INF           48.0000        95.0000          .          
+K7 .K9 .T6        -INF           48.0000        95.0000          .          
+K8 .K4 .T1        -INF           53.0000        89.0000          .          
+K8 .K4 .T2        -INF           53.0000        89.0000          .          
+K8 .K4 .T3        -INF           53.0000        89.0000          .          
+K8 .K4 .T4        -INF           53.0000        89.0000          .          
+K8 .K4 .T5        -INF           53.0000        89.0000          .          
+K8 .K4 .T6        -INF           53.0000        89.0000          .          
+K8 .K9 .T1        -INF           59.0000        95.0000          .          
+K8 .K9 .T2        -INF           59.0000        95.0000          .          
+K8 .K9 .T3        -INF           59.0000        95.0000          .          
+K8 .K9 .T4        -INF           59.0000        95.0000          .          
+K8 .K9 .T5        -INF           59.0000        95.0000          .          
+K8 .K9 .T6        -INF           59.0000        95.0000          .          
+K9 .K1 .T1        -INF          -35.0000        60.0000          .          
+K9 .K1 .T2        -INF          -35.0000        60.0000          .          
+K9 .K1 .T3        -INF          -35.0000        60.0000          .          
+K9 .K1 .T4        -INF          -95.0000        60.0000          .          
+K9 .K1 .T5        -INF          -35.0000        60.0000          .          
+K9 .K1 .T6        -INF          -35.0000        60.0000          .          
+K9 .K2 .T1        -INF          -51.0000        44.0000          .          
+K9 .K2 .T2        -INF          -51.0000        44.0000          .          
+K9 .K2 .T3        -INF          -51.0000        44.0000          .          
+K9 .K2 .T4        -INF          -51.0000        44.0000          .          
+K9 .K2 .T5        -INF          -91.0000        44.0000          .          
+K9 .K2 .T6        -INF          -51.0000        44.0000          .          
+K9 .K3 .T1        -INF          -59.0000        36.0000          .          
+K9 .K3 .T2        -INF          -59.0000        36.0000          .          
+K9 .K3 .T3        -INF          -59.0000        36.0000          .          
+K9 .K3 .T4        -INF          -70.0000        36.0000          .          
+K9 .K3 .T5        -INF          -59.0000        36.0000          .          
+K9 .K3 .T6        -INF          -59.0000        36.0000          .          
+K9 .K4 .T1        -INF           -6.0000        89.0000          .          
+K9 .K4 .T2        -INF           -6.0000        89.0000          .          
+K9 .K4 .T3        -INF           -6.0000        89.0000          .          
+K9 .K4 .T4        -INF           -6.0000        89.0000          .          
+K9 .K4 .T5        -INF           -6.0000        89.0000          .          
+K9 .K4 .T6        -INF           -6.0000        89.0000          .          
+K9 .K5 .T1        -INF          -87.0000         8.0000          .          
+K9 .K5 .T2        -INF          -87.0000         8.0000          .          
+K9 .K5 .T3        -INF          -87.0000         8.0000          .          
+K9 .K5 .T4        -INF          -87.0000         8.0000          .          
+K9 .K5 .T5        -INF          -87.0000         8.0000          .          
+K9 .K5 .T6        -INF          -87.0000         8.0000          .          
+K9 .K6 .T1        -INF          -33.0000        62.0000          .          
+K9 .K6 .T2        -INF          -33.0000        62.0000          .          
+K9 .K6 .T3        -INF          -33.0000        62.0000          .          
+K9 .K6 .T4        -INF          -33.0000        62.0000          .          
+K9 .K6 .T5        -INF          -33.0000        62.0000          .          
+K9 .K6 .T6        -INF          -33.0000        62.0000          .          
+K9 .K7 .T1        -INF          -86.0000        47.0000          .          
+K9 .K7 .T2        -INF          -48.0000        47.0000          .          
+K9 .K7 .T3        -INF          -48.0000        47.0000          .          
+K9 .K7 .T4        -INF          -48.0000        47.0000          .          
+K9 .K7 .T5        -INF          -48.0000        47.0000          .          
+K9 .K7 .T6        -INF          -48.0000        47.0000          .          
+K9 .K8 .T1        -INF          -59.0000        36.0000          .          
+K9 .K8 .T2        -INF          -59.0000        36.0000          .          
+K9 .K8 .T3        -INF          -59.0000        36.0000          .          
+K9 .K8 .T4        -INF          -59.0000        36.0000          .          
+K9 .K8 .T5        -INF          -59.0000        36.0000          .          
+K9 .K8 .T6        -INF          -59.0000        36.0000          .          
+K9 .K10.T1        -INF          -70.0000        25.0000          .          
+K9 .K10.T2        -INF          -70.0000        25.0000          .          
+K9 .K10.T3        -INF          -70.0000        25.0000          .          
+K9 .K10.T4        -INF          -70.0000        25.0000          .          
+K9 .K10.T5        -INF          -70.0000        25.0000          .          
+K9 .K10.T6        -INF           25.0000        25.0000          .          
+K10.K4 .T1        -INF           64.0000        89.0000          .          
+K10.K4 .T2        -INF           64.0000        89.0000          .          
+K10.K4 .T3        -INF           64.0000        89.0000          .          
+K10.K4 .T4        -INF           64.0000        89.0000          .          
+K10.K4 .T5        -INF           64.0000        89.0000          .          
+K10.K4 .T6        -INF           69.0000        89.0000          .          
+K10.K9 .T1        -INF           70.0000        95.0000          .          
+K10.K9 .T2        -INF           70.0000        95.0000          .          
+K10.K9 .T3        -INF           70.0000        95.0000          .          
+K10.K9 .T4        -INF           70.0000        95.0000          .          
+K10.K9 .T5        -INF           70.0000        95.0000          .          
+K10.K9 .T6        -INF           75.0000        95.0000          .          
+
+---- EQU lower_bound_subtour_constr  lower bound to avoid subtours without depot
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1        -INF             .              .              .          
+depot.T2        -INF             .              .              .          
+depot.T3        -INF             .              .              .          
+depot.T4        -INF             .              .              .          
+depot.T5        -INF             .              .              .          
+depot.T6        -INF             .              .              .          
+K1   .T1        -INF          -40.0000       -40.0000          .          
+K1   .T2        -INF          -40.0000       -40.0000          .          
+K1   .T3        -INF          -40.0000       -40.0000          .          
+K1   .T4        -INF         -100.0000       -40.0000          .          
+K1   .T5        -INF          -40.0000       -40.0000          .          
+K1   .T6        -INF          -40.0000       -40.0000          .          
+K2   .T1        -INF          -56.0000       -56.0000          .          
+K2   .T2        -INF          -56.0000       -56.0000          .          
+K2   .T3        -INF          -56.0000       -56.0000          .          
+K2   .T4        -INF          -56.0000       -56.0000          .          
+K2   .T5        -INF          -96.0000       -56.0000          .          
+K2   .T6        -INF          -56.0000       -56.0000          .          
+K3   .T1        -INF          -64.0000       -64.0000          .          
+K3   .T2        -INF          -64.0000       -64.0000          .          
+K3   .T3        -INF          -64.0000       -64.0000          .          
+K3   .T4        -INF          -75.0000       -64.0000          .          
+K3   .T5        -INF          -64.0000       -64.0000          .          
+K3   .T6        -INF          -64.0000       -64.0000          .          
+K4   .T1        -INF          -11.0000       -11.0000          .          
+K4   .T2        -INF          -11.0000       -11.0000          .          
+K4   .T3        -INF          -11.0000       -11.0000          .          
+K4   .T4        -INF          -11.0000       -11.0000          .          
+K4   .T5        -INF          -11.0000       -11.0000          .          
+K4   .T6        -INF          -11.0000       -11.0000          .          
+K5   .T1        -INF          -92.0000       -92.0000          .          
+K5   .T2        -INF          -92.0000       -92.0000          .          
+K5   .T3        -INF          -92.0000       -92.0000          .          
+K5   .T4        -INF          -92.0000       -92.0000          .          
+K5   .T5        -INF          -92.0000       -92.0000          .          
+K5   .T6        -INF          -92.0000       -92.0000          .          
+K6   .T1        -INF          -38.0000       -38.0000          .          
+K6   .T2        -INF          -38.0000       -38.0000          .          
+K6   .T3        -INF          -38.0000       -38.0000          .          
+K6   .T4        -INF          -38.0000       -38.0000          .          
+K6   .T5        -INF          -38.0000       -38.0000          .          
+K6   .T6        -INF          -38.0000       -38.0000          .          
+K7   .T1        -INF          -91.0000       -53.0000          .          
+K7   .T2        -INF          -53.0000       -53.0000          .          
+K7   .T3        -INF          -53.0000       -53.0000          .          
+K7   .T4        -INF          -53.0000       -53.0000          .          
+K7   .T5        -INF          -53.0000       -53.0000          .          
+K7   .T6        -INF          -53.0000       -53.0000          .          
+K8   .T1        -INF          -64.0000       -64.0000          .          
+K8   .T2        -INF          -64.0000       -64.0000          .          
+K8   .T3        -INF          -64.0000       -64.0000          .          
+K8   .T4        -INF          -64.0000       -64.0000          .          
+K8   .T5        -INF          -64.0000       -64.0000          .          
+K8   .T6        -INF          -64.0000       -64.0000          .          
+K9   .T1        -INF           -5.0000        -5.0000          .          
+K9   .T2        -INF           -5.0000        -5.0000          .          
+K9   .T3        -INF           -5.0000        -5.0000          .          
+K9   .T4        -INF           -5.0000        -5.0000          .          
+K9   .T5        -INF           -5.0000        -5.0000          .          
+K9   .T6        -INF           -5.0000        -5.0000          .          
+K10  .T1        -INF          -75.0000       -75.0000          .          
+K10  .T2        -INF          -75.0000       -75.0000          .          
+K10  .T3        -INF          -75.0000       -75.0000          .          
+K10  .T4        -INF          -75.0000       -75.0000          .          
+K10  .T5        -INF          -75.0000       -75.0000          .          
+K10  .T6        -INF          -80.0000       -75.0000          .          
+
+---- EQU upper_bound_subtour_constr  upper bound to avoid subtours without depot
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1        -INF             .           100.0000          .          
+depot.T2        -INF             .           100.0000          .          
+depot.T3        -INF             .           100.0000          .          
+depot.T4        -INF             .           100.0000          .          
+depot.T5        -INF             .           100.0000          .          
+depot.T6        -INF             .           100.0000          .          
+K1   .T1        -INF           40.0000       100.0000          .          
+K1   .T2        -INF           40.0000       100.0000          .          
+K1   .T3        -INF           40.0000       100.0000          .          
+K1   .T4        -INF          100.0000       100.0000          .          
+K1   .T5        -INF           40.0000       100.0000          .          
+K1   .T6        -INF           40.0000       100.0000          .          
+K2   .T1        -INF           56.0000       100.0000          .          
+K2   .T2        -INF           56.0000       100.0000          .          
+K2   .T3        -INF           56.0000       100.0000          .          
+K2   .T4        -INF           56.0000       100.0000          .          
+K2   .T5        -INF           96.0000       100.0000          .          
+K2   .T6        -INF           56.0000       100.0000          .          
+K3   .T1        -INF           64.0000       100.0000          .          
+K3   .T2        -INF           64.0000       100.0000          .          
+K3   .T3        -INF           64.0000       100.0000          .          
+K3   .T4        -INF           75.0000       100.0000          .          
+K3   .T5        -INF           64.0000       100.0000          .          
+K3   .T6        -INF           64.0000       100.0000          .          
+K4   .T1        -INF           11.0000       100.0000          .          
+K4   .T2        -INF           11.0000       100.0000          .          
+K4   .T3        -INF           11.0000       100.0000          .          
+K4   .T4        -INF           11.0000       100.0000          .          
+K4   .T5        -INF           11.0000       100.0000          .          
+K4   .T6        -INF           11.0000       100.0000          .          
+K5   .T1        -INF           92.0000       100.0000          .          
+K5   .T2        -INF           92.0000       100.0000          .          
+K5   .T3        -INF           92.0000       100.0000          .          
+K5   .T4        -INF           92.0000       100.0000          .          
+K5   .T5        -INF           92.0000       100.0000          .          
+K5   .T6        -INF           92.0000       100.0000          .          
+K6   .T1        -INF           38.0000       100.0000          .          
+K6   .T2        -INF           38.0000       100.0000          .          
+K6   .T3        -INF           38.0000       100.0000          .          
+K6   .T4        -INF           38.0000       100.0000          .          
+K6   .T5        -INF           38.0000       100.0000          .          
+K6   .T6        -INF           38.0000       100.0000          .          
+K7   .T1        -INF           91.0000       100.0000          .          
+K7   .T2        -INF           53.0000       100.0000          .          
+K7   .T3        -INF           53.0000       100.0000          .          
+K7   .T4        -INF           53.0000       100.0000          .          
+K7   .T5        -INF           53.0000       100.0000          .          
+K7   .T6        -INF           53.0000       100.0000          .          
+K8   .T1        -INF           64.0000       100.0000          .          
+K8   .T2        -INF           64.0000       100.0000          .          
+K8   .T3        -INF           64.0000       100.0000          .          
+K8   .T4        -INF           64.0000       100.0000          .          
+K8   .T5        -INF           64.0000       100.0000          .          
+K8   .T6        -INF           64.0000       100.0000          .          
+K9   .T1        -INF            5.0000       100.0000          .          
+K9   .T2        -INF            5.0000       100.0000          .          
+K9   .T3        -INF            5.0000       100.0000          .          
+K9   .T4        -INF            5.0000       100.0000          .          
+K9   .T5        -INF            5.0000       100.0000          .          
+K9   .T6        -INF            5.0000       100.0000          .          
+K10  .T1        -INF           75.0000       100.0000          .          
+K10  .T2        -INF           75.0000       100.0000          .          
+K10  .T3        -INF           75.0000       100.0000          .          
+K10  .T4        -INF           75.0000       100.0000          .          
+K10  .T5        -INF           75.0000       100.0000          .          
+K10  .T6        -INF           80.0000       100.0000          .          
+
+---- VAR x  1 if transport vehicle k drives directly from node i to node j, otherwise 0
+
+                      LOWER          LEVEL          UPPER         MARGINAL
+
+depot.depot.T1          .              .             1.0000        99.0000      
+depot.depot.T2          .              .             1.0000        99.0000      
+depot.depot.T3          .              .             1.0000        99.0000      
+depot.depot.T4          .              .             1.0000        99.0000      
+depot.depot.T5          .              .             1.0000        99.0000      
+depot.depot.T6          .              .             1.0000        99.0000      
+depot.K1   .T1          .              .             1.0000         8.0770      
+depot.K1   .T2          .              .             1.0000         8.0770      
+depot.K1   .T3          .              .             1.0000         8.0770      
+depot.K1   .T4          .              .             1.0000         8.0770      
+depot.K1   .T5          .             1.0000         1.0000         8.0770      
+depot.K1   .T6          .              .             1.0000         8.0770      
+depot.K2   .T1          .              .             1.0000         6.5420      
+depot.K2   .T2          .              .             1.0000         6.5420      
+depot.K2   .T3          .              .             1.0000         6.5420      
+depot.K2   .T4          .              .             1.0000         6.5420      
+depot.K2   .T5          .              .             1.0000         6.5420      
+depot.K2   .T6          .              .             1.0000         6.5420      
+depot.K3   .T1          .              .             1.0000         2.7500      
+depot.K3   .T2          .              .             1.0000         2.7500      
+depot.K3   .T3          .              .             1.0000         2.7500      
+depot.K3   .T4          .              .             1.0000         2.7500      
+depot.K3   .T5          .              .             1.0000         2.7500      
+depot.K3   .T6          .              .             1.0000         2.7500      
+depot.K4   .T1          .              .             1.0000         1.3410      
+depot.K4   .T2          .              .             1.0000         1.3410      
+depot.K4   .T3          .              .             1.0000         1.3410      
+depot.K4   .T4          .             1.0000         1.0000         1.3410      
+depot.K4   .T5          .              .             1.0000         1.3410      
+depot.K4   .T6          .              .             1.0000         1.3410      
+depot.K5   .T1          .              .             1.0000         3.5680      
+depot.K5   .T2          .             1.0000         1.0000         3.5680      
+depot.K5   .T3          .              .             1.0000         3.5680      
+depot.K5   .T4          .              .             1.0000         3.5680      
+depot.K5   .T5          .              .             1.0000         3.5680      
+depot.K5   .T6          .              .             1.0000         3.5680      
+depot.K6   .T1          .             1.0000         1.0000         5.4470      
+depot.K6   .T2          .              .             1.0000         5.4470      
+depot.K6   .T3          .              .             1.0000         5.4470      
+depot.K6   .T4          .              .             1.0000         5.4470      
+depot.K6   .T5          .              .             1.0000         5.4470      
+depot.K6   .T6          .              .             1.0000         5.4470      
+depot.K7   .T1          .              .             1.0000         2.3630      
+depot.K7   .T2          .              .             1.0000         2.3630      
+depot.K7   .T3          .              .             1.0000         2.3630      
+depot.K7   .T4          .              .             1.0000         2.3630      
+depot.K7   .T5          .              .             1.0000         2.3630      
+depot.K7   .T6          .              .             1.0000         2.3630      
+depot.K8   .T1          .              .             1.0000         1.2290      
+depot.K8   .T2          .              .             1.0000         1.2290      
+depot.K8   .T3          .             1.0000         1.0000         1.2290      
+depot.K8   .T4          .              .             1.0000         1.2290      
+depot.K8   .T5          .              .             1.0000         1.2290      
+depot.K8   .T6          .              .             1.0000         1.2290      
+depot.K9   .T1          .              .             1.0000         4.8430      
+depot.K9   .T2          .              .             1.0000         4.8430      
+depot.K9   .T3          .              .             1.0000         4.8430      
+depot.K9   .T4          .              .             1.0000         4.8430      
+depot.K9   .T5          .              .             1.0000         4.8430      
+depot.K9   .T6          .             1.0000         1.0000         4.8430      
+depot.K10  .T1          .              .             1.0000         6.4510      
+depot.K10  .T2          .              .             1.0000         6.4510      
+depot.K10  .T3          .              .             1.0000         6.4510      
+depot.K10  .T4          .              .             1.0000         6.4510      
+depot.K10  .T5          .              .             1.0000         6.4510      
+depot.K10  .T6          .              .             1.0000         6.4510      
+K1   .depot.T1          .              .             1.0000         8.0770      
+K1   .depot.T2          .              .             1.0000         8.0770      
+K1   .depot.T3          .              .             1.0000         8.0770      
+K1   .depot.T4          .              .             1.0000         8.0770      
+K1   .depot.T5          .              .             1.0000         8.0770      
+K1   .depot.T6          .              .             1.0000         8.0770      
+K1   .K1   .T1          .              .             1.0000        99.0000      
+K1   .K1   .T2          .              .             1.0000        99.0000      
+K1   .K1   .T3          .              .             1.0000        99.0000      
+K1   .K1   .T4          .              .             1.0000        99.0000      
+K1   .K1   .T5          .              .             1.0000        99.0000      
+K1   .K1   .T6          .              .             1.0000        99.0000      
+K1   .K2   .T1          .              .             1.0000         1.5590      
+K1   .K2   .T2          .              .             1.0000         1.5590      
+K1   .K2   .T3          .              .             1.0000         1.5590      
+K1   .K2   .T4          .              .             1.0000         1.5590      
+K1   .K2   .T5          .             1.0000         1.0000         1.5590      
+K1   .K2   .T6          .              .             1.0000         1.5590      
+K1   .K3   .T1          .              .             1.0000         7.2360      
+K1   .K3   .T2          .              .             1.0000         7.2360      
+K1   .K3   .T3          .              .             1.0000         7.2360      
+K1   .K3   .T4          .              .             1.0000         7.2360      
+K1   .K3   .T5          .              .             1.0000         7.2360      
+K1   .K3   .T6          .              .             1.0000         7.2360      
+K1   .K4   .T1          .              .             1.0000         7.5190      
+K1   .K4   .T2          .              .             1.0000         7.5190      
+K1   .K4   .T3          .              .             1.0000         7.5190      
+K1   .K4   .T4          .              .             1.0000         7.5190      
+K1   .K4   .T5          .              .             1.0000         7.5190      
+K1   .K4   .T6          .              .             1.0000         7.5190      
+K1   .K5   .T1          .              .             1.0000         8.5960      
+K1   .K5   .T2          .              .             1.0000         8.5960      
+K1   .K5   .T3          .              .             1.0000         8.5960      
+K1   .K5   .T4          .              .             1.0000         8.5960      
+K1   .K5   .T5          .              .             1.0000         8.5960      
+K1   .K5   .T6          .              .             1.0000         8.5960      
+K1   .K6   .T1          .              .             1.0000         9.6000      
+K1   .K6   .T2          .              .             1.0000         9.6000      
+K1   .K6   .T3          .              .             1.0000         9.6000      
+K1   .K6   .T4          .              .             1.0000         9.6000      
+K1   .K6   .T5          .              .             1.0000         9.6000      
+K1   .K6   .T6          .              .             1.0000         9.6000      
+K1   .K7   .T1          .              .             1.0000         8.6980      
+K1   .K7   .T2          .              .             1.0000         8.6980      
+K1   .K7   .T3          .              .             1.0000         8.6980      
+K1   .K7   .T4          .              .             1.0000         8.6980      
+K1   .K7   .T5          .              .             1.0000         8.6980      
+K1   .K7   .T6          .              .             1.0000         8.6980      
+K1   .K8   .T1          .              .             1.0000         8.4880      
+K1   .K8   .T2          .              .             1.0000         8.4880      
+K1   .K8   .T3          .              .             1.0000         8.4880      
+K1   .K8   .T4          .              .             1.0000         8.4880      
+K1   .K8   .T5          .              .             1.0000         8.4880      
+K1   .K8   .T6          .              .             1.0000         8.4880      
+K1   .K9   .T1          .              .             1.0000        10.3590      
+K1   .K9   .T2          .              .             1.0000        10.3590      
+K1   .K9   .T3          .              .             1.0000        10.3590      
+K1   .K9   .T4          .              .             1.0000        10.3590      
+K1   .K9   .T5          .              .             1.0000        10.3590      
+K1   .K9   .T6          .              .             1.0000        10.3590      
+K1   .K10  .T1          .              .             1.0000        12.0750      
+K1   .K10  .T2          .              .             1.0000        12.0750      
+K1   .K10  .T3          .              .             1.0000        12.0750      
+K1   .K10  .T4          .              .             1.0000        12.0750      
+K1   .K10  .T5          .              .             1.0000        12.0750      
+K1   .K10  .T6          .              .             1.0000        12.0750      
+K2   .depot.T1          .              .             1.0000         6.5420      
+K2   .depot.T2          .              .             1.0000         6.5420      
+K2   .depot.T3          .              .             1.0000         6.5420      
+K2   .depot.T4          .              .             1.0000         6.5420      
+K2   .depot.T5          .             1.0000         1.0000         6.5420      
+K2   .depot.T6          .              .             1.0000         6.5420      
+K2   .K1   .T1          .              .             1.0000         1.5590      
+K2   .K1   .T2          .              .             1.0000         1.5590      
+K2   .K1   .T3          .              .             1.0000         1.5590      
+K2   .K1   .T4          .              .             1.0000         1.5590      
+K2   .K1   .T5          .              .             1.0000         1.5590      
+K2   .K1   .T6          .              .             1.0000         1.5590      
+K2   .K2   .T1          .              .             1.0000        99.0000      
+K2   .K2   .T2          .              .             1.0000        99.0000      
+K2   .K2   .T3          .              .             1.0000        99.0000      
+K2   .K2   .T4          .              .             1.0000        99.0000      
+K2   .K2   .T5          .              .             1.0000        99.0000      
+K2   .K2   .T6          .              .             1.0000        99.0000      
+K2   .K3   .T1          .              .             1.0000         5.7100      
+K2   .K3   .T2          .              .             1.0000         5.7100      
+K2   .K3   .T3          .              .             1.0000         5.7100      
+K2   .K3   .T4          .              .             1.0000         5.7100      
+K2   .K3   .T5          .              .             1.0000         5.7100      
+K2   .K3   .T6          .              .             1.0000         5.7100      
+K2   .K4   .T1          .              .             1.0000         5.9600      
+K2   .K4   .T2          .              .             1.0000         5.9600      
+K2   .K4   .T3          .              .             1.0000         5.9600      
+K2   .K4   .T4          .              .             1.0000         5.9600      
+K2   .K4   .T5          .              .             1.0000         5.9600      
+K2   .K4   .T6          .              .             1.0000         5.9600      
+K2   .K5   .T1          .              .             1.0000         7.1040      
+K2   .K5   .T2          .              .             1.0000         7.1040      
+K2   .K5   .T3          .              .             1.0000         7.1040      
+K2   .K5   .T4          .              .             1.0000         7.1040      
+K2   .K5   .T5          .              .             1.0000         7.1040      
+K2   .K5   .T6          .              .             1.0000         7.1040      
+K2   .K6   .T1          .              .             1.0000         8.5420      
+K2   .K6   .T2          .              .             1.0000         8.5420      
+K2   .K6   .T3          .              .             1.0000         8.5420      
+K2   .K6   .T4          .              .             1.0000         8.5420      
+K2   .K6   .T5          .              .             1.0000         8.5420      
+K2   .K6   .T6          .              .             1.0000         8.5420      
+K2   .K7   .T1          .              .             1.0000         7.3120      
+K2   .K7   .T2          .              .             1.0000         7.3120      
+K2   .K7   .T3          .              .             1.0000         7.3120      
+K2   .K7   .T4          .              .             1.0000         7.3120      
+K2   .K7   .T5          .              .             1.0000         7.3120      
+K2   .K7   .T6          .              .             1.0000         7.3120      
+K2   .K8   .T1          .              .             1.0000         7.0140      
+K2   .K8   .T2          .              .             1.0000         7.0140      
+K2   .K8   .T3          .              .             1.0000         7.0140      
+K2   .K8   .T4          .              .             1.0000         7.0140      
+K2   .K8   .T5          .              .             1.0000         7.0140      
+K2   .K8   .T6          .              .             1.0000         7.0140      
+K2   .K9   .T1          .              .             1.0000         8.8880      
+K2   .K9   .T2          .              .             1.0000         8.8880      
+K2   .K9   .T3          .              .             1.0000         8.8880      
+K2   .K9   .T4          .              .             1.0000         8.8880      
+K2   .K9   .T5          .              .             1.0000         8.8880      
+K2   .K9   .T6          .              .             1.0000         8.8880      
+K2   .K10  .T1          .              .             1.0000        10.6280      
+K2   .K10  .T2          .              .             1.0000        10.6280      
+K2   .K10  .T3          .              .             1.0000        10.6280      
+K2   .K10  .T4          .              .             1.0000        10.6280      
+K2   .K10  .T5          .              .             1.0000        10.6280      
+K2   .K10  .T6          .              .             1.0000        10.6280      
+K3   .depot.T1          .              .             1.0000         2.7500      
+K3   .depot.T2          .              .             1.0000         2.7500      
+K3   .depot.T3          .              .             1.0000         2.7500      
+K3   .depot.T4          .             1.0000         1.0000         2.7500      
+K3   .depot.T5          .              .             1.0000         2.7500      
+K3   .depot.T6          .              .             1.0000         2.7500      
+K3   .K1   .T1          .              .             1.0000         7.2360      
+K3   .K1   .T2          .              .             1.0000         7.2360      
+K3   .K1   .T3          .              .             1.0000         7.2360      
+K3   .K1   .T4          .              .             1.0000         7.2360      
+K3   .K1   .T5          .              .             1.0000         7.2360      
+K3   .K1   .T6          .              .             1.0000         7.2360      
+K3   .K2   .T1          .              .             1.0000         5.7100      
+K3   .K2   .T2          .              .             1.0000         5.7100      
+K3   .K2   .T3          .              .             1.0000         5.7100      
+K3   .K2   .T4          .              .             1.0000         5.7100      
+K3   .K2   .T5          .              .             1.0000         5.7100      
+K3   .K2   .T6          .              .             1.0000         5.7100      
+K3   .K3   .T1          .              .             1.0000        99.0000      
+K3   .K3   .T2          .              .             1.0000        99.0000      
+K3   .K3   .T3          .              .             1.0000        99.0000      
+K3   .K3   .T4          .              .             1.0000        99.0000      
+K3   .K3   .T5          .              .             1.0000        99.0000      
+K3   .K3   .T6          .              .             1.0000        99.0000      
+K3   .K4   .T1          .              .             1.0000         1.4100      
+K3   .K4   .T2          .              .             1.0000         1.4100      
+K3   .K4   .T3          .              .             1.0000         1.4100      
+K3   .K4   .T4          .              .             1.0000         1.4100      
+K3   .K4   .T5          .              .             1.0000         1.4100      
+K3   .K4   .T6          .              .             1.0000         1.4100      
+K3   .K5   .T1          .              .             1.0000         1.5090      
+K3   .K5   .T2          .              .             1.0000         1.5090      
+K3   .K5   .T3          .              .             1.0000         1.5090      
+K3   .K5   .T4          .              .             1.0000         1.5090      
+K3   .K5   .T5          .              .             1.0000         1.5090      
+K3   .K5   .T6          .              .             1.0000         1.5090      
+K3   .K6   .T1          .              .             1.0000         7.9610      
+K3   .K6   .T2          .              .             1.0000         7.9610      
+K3   .K6   .T3          .              .             1.0000         7.9610      
+K3   .K6   .T4          .              .             1.0000         7.9610      
+K3   .K6   .T5          .              .             1.0000         7.9610      
+K3   .K6   .T6          .              .             1.0000         7.9610      
+K3   .K7   .T1          .              .             1.0000         5.0350      
+K3   .K7   .T2          .              .             1.0000         5.0350      
+K3   .K7   .T3          .              .             1.0000         5.0350      
+K3   .K7   .T4          .              .             1.0000         5.0350      
+K3   .K7   .T5          .              .             1.0000         5.0350      
+K3   .K7   .T6          .              .             1.0000         5.0350      
+K3   .K8   .T1          .              .             1.0000         3.9610      
+K3   .K8   .T2          .              .             1.0000         3.9610      
+K3   .K8   .T3          .              .             1.0000         3.9610      
+K3   .K8   .T4          .              .             1.0000         3.9610      
+K3   .K8   .T5          .              .             1.0000         3.9610      
+K3   .K8   .T6          .              .             1.0000         3.9610      
+K3   .K9   .T1          .              .             1.0000         3.3120      
+K3   .K9   .T2          .              .             1.0000         3.3120      
+K3   .K9   .T3          .              .             1.0000         3.3120      
+K3   .K9   .T4          .              .             1.0000         3.3120      
+K3   .K9   .T5          .              .             1.0000         3.3120      
+K3   .K9   .T6          .              .             1.0000         3.3120      
+K3   .K10  .T1          .              .             1.0000         5.1050      
+K3   .K10  .T2          .              .             1.0000         5.1050      
+K3   .K10  .T3          .              .             1.0000         5.1050      
+K3   .K10  .T4          .              .             1.0000         5.1050      
+K3   .K10  .T5          .              .             1.0000         5.1050      
+K3   .K10  .T6          .              .             1.0000         5.1050      
+K4   .depot.T1          .              .             1.0000         1.3410      
+K4   .depot.T2          .              .             1.0000         1.3410      
+K4   .depot.T3          .              .             1.0000         1.3410      
+K4   .depot.T4          .              .             1.0000         1.3410      
+K4   .depot.T5          .              .             1.0000         1.3410      
+K4   .depot.T6          .              .             1.0000         1.3410      
+K4   .K1   .T1          .              .             1.0000         7.5190      
+K4   .K1   .T2          .              .             1.0000         7.5190      
+K4   .K1   .T3          .              .             1.0000         7.5190      
+K4   .K1   .T4          .              .             1.0000         7.5190      
+K4   .K1   .T5          .              .             1.0000         7.5190      
+K4   .K1   .T6          .              .             1.0000         7.5190      
+K4   .K2   .T1          .              .             1.0000         5.9600      
+K4   .K2   .T2          .              .             1.0000         5.9600      
+K4   .K2   .T3          .              .             1.0000         5.9600      
+K4   .K2   .T4          .              .             1.0000         5.9600      
+K4   .K2   .T5          .              .             1.0000         5.9600      
+K4   .K2   .T6          .              .             1.0000         5.9600      
+K4   .K3   .T1          .              .             1.0000         1.4100      
+K4   .K3   .T2          .              .             1.0000         1.4100      
+K4   .K3   .T3          .              .             1.0000         1.4100      
+K4   .K3   .T4          .             1.0000         1.0000         1.4100      
+K4   .K3   .T5          .              .             1.0000         1.4100      
+K4   .K3   .T6          .              .             1.0000         1.4100      
+K4   .K4   .T1          .              .             1.0000        99.0000      
+K4   .K4   .T2          .              .             1.0000        99.0000      
+K4   .K4   .T3          .              .             1.0000        99.0000      
+K4   .K4   .T4          .              .             1.0000        99.0000      
+K4   .K4   .T5          .              .             1.0000        99.0000      
+K4   .K4   .T6          .              .             1.0000        99.0000      
+K4   .K5   .T1          .              .             1.0000         2.4190      
+K4   .K5   .T2          .              .             1.0000         2.4190      
+K4   .K5   .T3          .              .             1.0000         2.4190      
+K4   .K5   .T4          .              .             1.0000         2.4190      
+K4   .K5   .T5          .              .             1.0000         2.4190      
+K4   .K5   .T6          .              .             1.0000         2.4190      
+K4   .K6   .T1          .              .             1.0000         6.6350      
+K4   .K6   .T2          .              .             1.0000         6.6350      
+K4   .K6   .T3          .              .             1.0000         6.6350      
+K4   .K6   .T4          .              .             1.0000         6.6350      
+K4   .K6   .T5          .              .             1.0000         6.6350      
+K4   .K6   .T6          .              .             1.0000         6.6350      
+K4   .K7   .T1          .              .             1.0000         3.6430      
+K4   .K7   .T2          .              .             1.0000         3.6430      
+K4   .K7   .T3          .              .             1.0000         3.6430      
+K4   .K7   .T4          .              .             1.0000         3.6430      
+K4   .K7   .T5          .              .             1.0000         3.6430      
+K4   .K7   .T6          .              .             1.0000         3.6430      
+K4   .K8   .T1          .              .             1.0000         2.5530      
+K4   .K8   .T2          .              .             1.0000         2.5530      
+K4   .K8   .T3          .              .             1.0000         2.5530      
+K4   .K8   .T4          .              .             1.0000         2.5530      
+K4   .K8   .T5          .              .             1.0000         2.5530      
+K4   .K8   .T6          .              .             1.0000         2.5530      
+K4   .K9   .T1          .              .             1.0000         3.9640      
+K4   .K9   .T2          .              .             1.0000         3.9640      
+K4   .K9   .T3          .              .             1.0000         3.9640      
+K4   .K9   .T4          .              .             1.0000         3.9640      
+K4   .K9   .T5          .              .             1.0000         3.9640      
+K4   .K9   .T6          .              .             1.0000         3.9640      
+K4   .K10  .T1          .              .             1.0000         5.7010      
+K4   .K10  .T2          .              .             1.0000         5.7010      
+K4   .K10  .T3          .              .             1.0000         5.7010      
+K4   .K10  .T4          .              .             1.0000         5.7010      
+K4   .K10  .T5          .              .             1.0000         5.7010      
+K4   .K10  .T6          .              .             1.0000         5.7010      
+K5   .depot.T1          .              .             1.0000         3.5680      
+K5   .depot.T2          .             1.0000         1.0000         3.5680      
+K5   .depot.T3          .              .             1.0000         3.5680      
+K5   .depot.T4          .              .             1.0000         3.5680      
+K5   .depot.T5          .              .             1.0000         3.5680      
+K5   .depot.T6          .              .             1.0000         3.5680      
+K5   .K1   .T1          .              .             1.0000         8.5960      
+K5   .K1   .T2          .              .             1.0000         8.5960      
+K5   .K1   .T3          .              .             1.0000         8.5960      
+K5   .K1   .T4          .              .             1.0000         8.5960      
+K5   .K1   .T5          .              .             1.0000         8.5960      
+K5   .K1   .T6          .              .             1.0000         8.5960      
+K5   .K2   .T1          .              .             1.0000         7.1040      
+K5   .K2   .T2          .              .             1.0000         7.1040      
+K5   .K2   .T3          .              .             1.0000         7.1040      
+K5   .K2   .T4          .              .             1.0000         7.1040      
+K5   .K2   .T5          .              .             1.0000         7.1040      
+K5   .K2   .T6          .              .             1.0000         7.1040      
+K5   .K3   .T1          .              .             1.0000         1.5090      
+K5   .K3   .T2          .              .             1.0000         1.5090      
+K5   .K3   .T3          .              .             1.0000         1.5090      
+K5   .K3   .T4          .              .             1.0000         1.5090      
+K5   .K3   .T5          .              .             1.0000         1.5090      
+K5   .K3   .T6          .              .             1.0000         1.5090      
+K5   .K4   .T1          .              .             1.0000         2.4190      
+K5   .K4   .T2          .              .             1.0000         2.4190      
+K5   .K4   .T3          .              .             1.0000         2.4190      
+K5   .K4   .T4          .              .             1.0000         2.4190      
+K5   .K4   .T5          .              .             1.0000         2.4190      
+K5   .K4   .T6          .              .             1.0000         2.4190      
+K5   .K5   .T1          .              .             1.0000        99.0000      
+K5   .K5   .T2          .              .             1.0000        99.0000      
+K5   .K5   .T3          .              .             1.0000        99.0000      
+K5   .K5   .T4          .              .             1.0000        99.0000      
+K5   .K5   .T5          .              .             1.0000        99.0000      
+K5   .K5   .T6          .              .             1.0000        99.0000      
+K5   .K6   .T1          .              .             1.0000         9.0030      
+K5   .K6   .T2          .              .             1.0000         9.0030      
+K5   .K6   .T3          .              .             1.0000         9.0030      
+K5   .K6   .T4          .              .             1.0000         9.0030      
+K5   .K6   .T5          .              .             1.0000         9.0030      
+K5   .K6   .T6          .              .             1.0000         9.0030      
+K5   .K7   .T1          .              .             1.0000         5.9290      
+K5   .K7   .T2          .              .             1.0000         5.9290      
+K5   .K7   .T3          .              .             1.0000         5.9290      
+K5   .K7   .T4          .              .             1.0000         5.9290      
+K5   .K7   .T5          .              .             1.0000         5.9290      
+K5   .K7   .T6          .              .             1.0000         5.9290      
+K5   .K8   .T1          .              .             1.0000         4.7790      
+K5   .K8   .T2          .              .             1.0000         4.7790      
+K5   .K8   .T3          .              .             1.0000         4.7790      
+K5   .K8   .T4          .              .             1.0000         4.7790      
+K5   .K8   .T5          .              .             1.0000         4.7790      
+K5   .K8   .T6          .              .             1.0000         4.7790      
+K5   .K9   .T1          .              .             1.0000         1.8120      
+K5   .K9   .T2          .              .             1.0000         1.8120      
+K5   .K9   .T3          .              .             1.0000         1.8120      
+K5   .K9   .T4          .              .             1.0000         1.8120      
+K5   .K9   .T5          .              .             1.0000         1.8120      
+K5   .K9   .T6          .              .             1.0000         1.8120      
+K5   .K10  .T1          .              .             1.0000         3.6010      
+K5   .K10  .T2          .              .             1.0000         3.6010      
+K5   .K10  .T3          .              .             1.0000         3.6010      
+K5   .K10  .T4          .              .             1.0000         3.6010      
+K5   .K10  .T5          .              .             1.0000         3.6010      
+K5   .K10  .T6          .              .             1.0000         3.6010      
+K6   .depot.T1          .              .             1.0000         5.4470      
+K6   .depot.T2          .              .             1.0000         5.4470      
+K6   .depot.T3          .              .             1.0000         5.4470      
+K6   .depot.T4          .              .             1.0000         5.4470      
+K6   .depot.T5          .              .             1.0000         5.4470      
+K6   .depot.T6          .              .             1.0000         5.4470      
+K6   .K1   .T1          .              .             1.0000         9.6000      
+K6   .K1   .T2          .              .             1.0000         9.6000      
+K6   .K1   .T3          .              .             1.0000         9.6000      
+K6   .K1   .T4          .              .             1.0000         9.6000      
+K6   .K1   .T5          .              .             1.0000         9.6000      
+K6   .K1   .T6          .              .             1.0000         9.6000      
+K6   .K2   .T1          .              .             1.0000         8.5420      
+K6   .K2   .T2          .              .             1.0000         8.5420      
+K6   .K2   .T3          .              .             1.0000         8.5420      
+K6   .K2   .T4          .              .             1.0000         8.5420      
+K6   .K2   .T5          .              .             1.0000         8.5420      
+K6   .K2   .T6          .              .             1.0000         8.5420      
+K6   .K3   .T1          .              .             1.0000         7.9610      
+K6   .K3   .T2          .              .             1.0000         7.9610      
+K6   .K3   .T3          .              .             1.0000         7.9610      
+K6   .K3   .T4          .              .             1.0000         7.9610      
+K6   .K3   .T5          .              .             1.0000         7.9610      
+K6   .K3   .T6          .              .             1.0000         7.9610      
+K6   .K4   .T1          .              .             1.0000         6.6350      
+K6   .K4   .T2          .              .             1.0000         6.6350      
+K6   .K4   .T3          .              .             1.0000         6.6350      
+K6   .K4   .T4          .              .             1.0000         6.6350      
+K6   .K4   .T5          .              .             1.0000         6.6350      
+K6   .K4   .T6          .              .             1.0000         6.6350      
+K6   .K5   .T1          .              .             1.0000         9.0030      
+K6   .K5   .T2          .              .             1.0000         9.0030      
+K6   .K5   .T3          .              .             1.0000         9.0030      
+K6   .K5   .T4          .              .             1.0000         9.0030      
+K6   .K5   .T5          .              .             1.0000         9.0030      
+K6   .K5   .T6          .              .             1.0000         9.0030      
+K6   .K6   .T1          .              .             1.0000        99.0000      
+K6   .K6   .T2          .              .             1.0000        99.0000      
+K6   .K6   .T3          .              .             1.0000        99.0000      
+K6   .K6   .T4          .              .             1.0000        99.0000      
+K6   .K6   .T5          .              .             1.0000        99.0000      
+K6   .K6   .T6          .              .             1.0000        99.0000      
+K6   .K7   .T1          .             1.0000         1.0000         3.1350      
+K6   .K7   .T2          .              .             1.0000         3.1350      
+K6   .K7   .T3          .              .             1.0000         3.1350      
+K6   .K7   .T4          .              .             1.0000         3.1350      
+K6   .K7   .T5          .              .             1.0000         3.1350      
+K6   .K7   .T6          .              .             1.0000         3.1350      
+K6   .K8   .T1          .              .             1.0000         4.2880      
+K6   .K8   .T2          .              .             1.0000         4.2880      
+K6   .K8   .T3          .              .             1.0000         4.2880      
+K6   .K8   .T4          .              .             1.0000         4.2880      
+K6   .K8   .T5          .              .             1.0000         4.2880      
+K6   .K8   .T6          .              .             1.0000         4.2880      
+K6   .K9   .T1          .              .             1.0000        10.2340      
+K6   .K9   .T2          .              .             1.0000        10.2340      
+K6   .K9   .T3          .              .             1.0000        10.2340      
+K6   .K9   .T4          .              .             1.0000        10.2340      
+K6   .K9   .T5          .              .             1.0000        10.2340      
+K6   .K9   .T6          .              .             1.0000        10.2340      
+K6   .K10  .T1          .              .             1.0000        11.7150      
+K6   .K10  .T2          .              .             1.0000        11.7150      
+K6   .K10  .T3          .              .             1.0000        11.7150      
+K6   .K10  .T4          .              .             1.0000        11.7150      
+K6   .K10  .T5          .              .             1.0000        11.7150      
+K6   .K10  .T6          .              .             1.0000        11.7150      
+K7   .depot.T1          .             1.0000         1.0000         2.3630      
+K7   .depot.T2          .              .             1.0000         2.3630      
+K7   .depot.T3          .              .             1.0000         2.3630      
+K7   .depot.T4          .              .             1.0000         2.3630      
+K7   .depot.T5          .              .             1.0000         2.3630      
+K7   .depot.T6          .              .             1.0000         2.3630      
+K7   .K1   .T1          .              .             1.0000         8.6980      
+K7   .K1   .T2          .              .             1.0000         8.6980      
+K7   .K1   .T3          .              .             1.0000         8.6980      
+K7   .K1   .T4          .              .             1.0000         8.6980      
+K7   .K1   .T5          .              .             1.0000         8.6980      
+K7   .K1   .T6          .              .             1.0000         8.6980      
+K7   .K2   .T1          .              .             1.0000         7.3120      
+K7   .K2   .T2          .              .             1.0000         7.3120      
+K7   .K2   .T3          .              .             1.0000         7.3120      
+K7   .K2   .T4          .              .             1.0000         7.3120      
+K7   .K2   .T5          .              .             1.0000         7.3120      
+K7   .K2   .T6          .              .             1.0000         7.3120      
+K7   .K3   .T1          .              .             1.0000         5.0350      
+K7   .K3   .T2          .              .             1.0000         5.0350      
+K7   .K3   .T3          .              .             1.0000         5.0350      
+K7   .K3   .T4          .              .             1.0000         5.0350      
+K7   .K3   .T5          .              .             1.0000         5.0350      
+K7   .K3   .T6          .              .             1.0000         5.0350      
+K7   .K4   .T1          .              .             1.0000         3.6430      
+K7   .K4   .T2          .              .             1.0000         3.6430      
+K7   .K4   .T3          .              .             1.0000         3.6430      
+K7   .K4   .T4          .              .             1.0000         3.6430      
+K7   .K4   .T5          .              .             1.0000         3.6430      
+K7   .K4   .T6          .              .             1.0000         3.6430      
+K7   .K5   .T1          .              .             1.0000         5.9290      
+K7   .K5   .T2          .              .             1.0000         5.9290      
+K7   .K5   .T3          .              .             1.0000         5.9290      
+K7   .K5   .T4          .              .             1.0000         5.9290      
+K7   .K5   .T5          .              .             1.0000         5.9290      
+K7   .K5   .T6          .              .             1.0000         5.9290      
+K7   .K6   .T1          .              .             1.0000         3.1350      
+K7   .K6   .T2          .              .             1.0000         3.1350      
+K7   .K6   .T3          .              .             1.0000         3.1350      
+K7   .K6   .T4          .              .             1.0000         3.1350      
+K7   .K6   .T5          .              .             1.0000         3.1350      
+K7   .K6   .T6          .              .             1.0000         3.1350      
+K7   .K7   .T1          .              .             1.0000        99.0000      
+K7   .K7   .T2          .              .             1.0000        99.0000      
+K7   .K7   .T3          .              .             1.0000        99.0000      
+K7   .K7   .T4          .              .             1.0000        99.0000      
+K7   .K7   .T5          .              .             1.0000        99.0000      
+K7   .K7   .T6          .              .             1.0000        99.0000      
+K7   .K8   .T1          .              .             1.0000         1.1600      
+K7   .K8   .T2          .              .             1.0000         1.1600      
+K7   .K8   .T3          .              .             1.0000         1.1600      
+K7   .K8   .T4          .              .             1.0000         1.1600      
+K7   .K8   .T5          .              .             1.0000         1.1600      
+K7   .K8   .T6          .              .             1.0000         1.1600      
+K7   .K9   .T1          .              .             1.0000         7.1000      
+K7   .K9   .T2          .              .             1.0000         7.1000      
+K7   .K9   .T3          .              .             1.0000         7.1000      
+K7   .K9   .T4          .              .             1.0000         7.1000      
+K7   .K9   .T5          .              .             1.0000         7.1000      
+K7   .K9   .T6          .              .             1.0000         7.1000      
+K7   .K10  .T1          .              .             1.0000         8.5910      
+K7   .K10  .T2          .              .             1.0000         8.5910      
+K7   .K10  .T3          .              .             1.0000         8.5910      
+K7   .K10  .T4          .              .             1.0000         8.5910      
+K7   .K10  .T5          .              .             1.0000         8.5910      
+K7   .K10  .T6          .              .             1.0000         8.5910      
+K8   .depot.T1          .              .             1.0000         1.2290      
+K8   .depot.T2          .              .             1.0000         1.2290      
+K8   .depot.T3          .             1.0000         1.0000         1.2290      
+K8   .depot.T4          .              .             1.0000         1.2290      
+K8   .depot.T5          .              .             1.0000         1.2290      
+K8   .depot.T6          .              .             1.0000         1.2290      
+K8   .K1   .T1          .              .             1.0000         8.4880      
+K8   .K1   .T2          .              .             1.0000         8.4880      
+K8   .K1   .T3          .              .             1.0000         8.4880      
+K8   .K1   .T4          .              .             1.0000         8.4880      
+K8   .K1   .T5          .              .             1.0000         8.4880      
+K8   .K1   .T6          .              .             1.0000         8.4880      
+K8   .K2   .T1          .              .             1.0000         7.0140      
+K8   .K2   .T2          .              .             1.0000         7.0140      
+K8   .K2   .T3          .              .             1.0000         7.0140      
+K8   .K2   .T4          .              .             1.0000         7.0140      
+K8   .K2   .T5          .              .             1.0000         7.0140      
+K8   .K2   .T6          .              .             1.0000         7.0140      
+K8   .K3   .T1          .              .             1.0000         3.9610      
+K8   .K3   .T2          .              .             1.0000         3.9610      
+K8   .K3   .T3          .              .             1.0000         3.9610      
+K8   .K3   .T4          .              .             1.0000         3.9610      
+K8   .K3   .T5          .              .             1.0000         3.9610      
+K8   .K3   .T6          .              .             1.0000         3.9610      
+K8   .K4   .T1          .              .             1.0000         2.5530      
+K8   .K4   .T2          .              .             1.0000         2.5530      
+K8   .K4   .T3          .              .             1.0000         2.5530      
+K8   .K4   .T4          .              .             1.0000         2.5530      
+K8   .K4   .T5          .              .             1.0000         2.5530      
+K8   .K4   .T6          .              .             1.0000         2.5530      
+K8   .K5   .T1          .              .             1.0000         4.7790      
+K8   .K5   .T2          .              .             1.0000         4.7790      
+K8   .K5   .T3          .              .             1.0000         4.7790      
+K8   .K5   .T4          .              .             1.0000         4.7790      
+K8   .K5   .T5          .              .             1.0000         4.7790      
+K8   .K5   .T6          .              .             1.0000         4.7790      
+K8   .K6   .T1          .              .             1.0000         4.2880      
+K8   .K6   .T2          .              .             1.0000         4.2880      
+K8   .K6   .T3          .              .             1.0000         4.2880      
+K8   .K6   .T4          .              .             1.0000         4.2880      
+K8   .K6   .T5          .              .             1.0000         4.2880      
+K8   .K6   .T6          .              .             1.0000         4.2880      
+K8   .K7   .T1          .              .             1.0000         1.1600      
+K8   .K7   .T2          .              .             1.0000         1.1600      
+K8   .K7   .T3          .              .             1.0000         1.1600      
+K8   .K7   .T4          .              .             1.0000         1.1600      
+K8   .K7   .T5          .              .             1.0000         1.1600      
+K8   .K7   .T6          .              .             1.0000         1.1600      
+K8   .K8   .T1          .              .             1.0000        99.0000      
+K8   .K8   .T2          .              .             1.0000        99.0000      
+K8   .K8   .T3          .              .             1.0000        99.0000      
+K8   .K8   .T4          .              .             1.0000        99.0000      
+K8   .K8   .T5          .              .             1.0000        99.0000      
+K8   .K8   .T6          .              .             1.0000        99.0000      
+K8   .K9   .T1          .              .             1.0000         5.9460      
+K8   .K9   .T2          .              .             1.0000         5.9460      
+K8   .K9   .T3          .              .             1.0000         5.9460      
+K8   .K9   .T4          .              .             1.0000         5.9460      
+K8   .K9   .T5          .              .             1.0000         5.9460      
+K8   .K9   .T6          .              .             1.0000         5.9460      
+K8   .K10  .T1          .              .             1.0000         7.4640      
+K8   .K10  .T2          .              .             1.0000         7.4640      
+K8   .K10  .T3          .              .             1.0000         7.4640      
+K8   .K10  .T4          .              .             1.0000         7.4640      
+K8   .K10  .T5          .              .             1.0000         7.4640      
+K8   .K10  .T6          .              .             1.0000         7.4640      
+K9   .depot.T1          .              .             1.0000         4.8430      
+K9   .depot.T2          .              .             1.0000         4.8430      
+K9   .depot.T3          .              .             1.0000         4.8430      
+K9   .depot.T4          .              .             1.0000         4.8430      
+K9   .depot.T5          .              .             1.0000         4.8430      
+K9   .depot.T6          .              .             1.0000         4.8430      
+K9   .K1   .T1          .              .             1.0000        10.3590      
+K9   .K1   .T2          .              .             1.0000        10.3590      
+K9   .K1   .T3          .              .             1.0000        10.3590      
+K9   .K1   .T4          .              .             1.0000        10.3590      
+K9   .K1   .T5          .              .             1.0000        10.3590      
+K9   .K1   .T6          .              .             1.0000        10.3590      
+K9   .K2   .T1          .              .             1.0000         8.8880      
+K9   .K2   .T2          .              .             1.0000         8.8880      
+K9   .K2   .T3          .              .             1.0000         8.8880      
+K9   .K2   .T4          .              .             1.0000         8.8880      
+K9   .K2   .T5          .              .             1.0000         8.8880      
+K9   .K2   .T6          .              .             1.0000         8.8880      
+K9   .K3   .T1          .              .             1.0000         3.3120      
+K9   .K3   .T2          .              .             1.0000         3.3120      
+K9   .K3   .T3          .              .             1.0000         3.3120      
+K9   .K3   .T4          .              .             1.0000         3.3120      
+K9   .K3   .T5          .              .             1.0000         3.3120      
+K9   .K3   .T6          .              .             1.0000         3.3120      
+K9   .K4   .T1          .              .             1.0000         3.9640      
+K9   .K4   .T2          .              .             1.0000         3.9640      
+K9   .K4   .T3          .              .             1.0000         3.9640      
+K9   .K4   .T4          .              .             1.0000         3.9640      
+K9   .K4   .T5          .              .             1.0000         3.9640      
+K9   .K4   .T6          .              .             1.0000         3.9640      
+K9   .K5   .T1          .              .             1.0000         1.8120      
+K9   .K5   .T2          .              .             1.0000         1.8120      
+K9   .K5   .T3          .              .             1.0000         1.8120      
+K9   .K5   .T4          .              .             1.0000         1.8120      
+K9   .K5   .T5          .              .             1.0000         1.8120      
+K9   .K5   .T6          .              .             1.0000         1.8120      
+K9   .K6   .T1          .              .             1.0000        10.2340      
+K9   .K6   .T2          .              .             1.0000        10.2340      
+K9   .K6   .T3          .              .             1.0000        10.2340      
+K9   .K6   .T4          .              .             1.0000        10.2340      
+K9   .K6   .T5          .              .             1.0000        10.2340      
+K9   .K6   .T6          .              .             1.0000        10.2340      
+K9   .K7   .T1          .              .             1.0000         7.1000      
+K9   .K7   .T2          .              .             1.0000         7.1000      
+K9   .K7   .T3          .              .             1.0000         7.1000      
+K9   .K7   .T4          .              .             1.0000         7.1000      
+K9   .K7   .T5          .              .             1.0000         7.1000      
+K9   .K7   .T6          .              .             1.0000         7.1000      
+K9   .K8   .T1          .              .             1.0000         5.9460      
+K9   .K8   .T2          .              .             1.0000         5.9460      
+K9   .K8   .T3          .              .             1.0000         5.9460      
+K9   .K8   .T4          .              .             1.0000         5.9460      
+K9   .K8   .T5          .              .             1.0000         5.9460      
+K9   .K8   .T6          .              .             1.0000         5.9460      
+K9   .K9   .T1          .              .             1.0000        99.0000      
+K9   .K9   .T2          .              .             1.0000        99.0000      
+K9   .K9   .T3          .              .             1.0000        99.0000      
+K9   .K9   .T4          .              .             1.0000        99.0000      
+K9   .K9   .T5          .              .             1.0000        99.0000      
+K9   .K9   .T6          .              .             1.0000        99.0000      
+K9   .K10  .T1          .              .             1.0000         1.7940      
+K9   .K10  .T2          .              .             1.0000         1.7940      
+K9   .K10  .T3          .              .             1.0000         1.7940      
+K9   .K10  .T4          .              .             1.0000         1.7940      
+K9   .K10  .T5          .              .             1.0000         1.7940      
+K9   .K10  .T6          .             1.0000         1.0000         1.7940      
+K10  .depot.T1          .              .             1.0000         6.4510      
+K10  .depot.T2          .              .             1.0000         6.4510      
+K10  .depot.T3          .              .             1.0000         6.4510      
+K10  .depot.T4          .              .             1.0000         6.4510      
+K10  .depot.T5          .              .             1.0000         6.4510      
+K10  .depot.T6          .             1.0000         1.0000         6.4510      
+K10  .K1   .T1          .              .             1.0000        12.0750      
+K10  .K1   .T2          .              .             1.0000        12.0750      
+K10  .K1   .T3          .              .             1.0000        12.0750      
+K10  .K1   .T4          .              .             1.0000        12.0750      
+K10  .K1   .T5          .              .             1.0000        12.0750      
+K10  .K1   .T6          .              .             1.0000        12.0750      
+K10  .K2   .T1          .              .             1.0000        10.6280      
+K10  .K2   .T2          .              .             1.0000        10.6280      
+K10  .K2   .T3          .              .             1.0000        10.6280      
+K10  .K2   .T4          .              .             1.0000        10.6280      
+K10  .K2   .T5          .              .             1.0000        10.6280      
+K10  .K2   .T6          .              .             1.0000        10.6280      
+K10  .K3   .T1          .              .             1.0000         5.1050      
+K10  .K3   .T2          .              .             1.0000         5.1050      
+K10  .K3   .T3          .              .             1.0000         5.1050      
+K10  .K3   .T4          .              .             1.0000         5.1050      
+K10  .K3   .T5          .              .             1.0000         5.1050      
+K10  .K3   .T6          .              .             1.0000         5.1050      
+K10  .K4   .T1          .              .             1.0000         5.7010      
+K10  .K4   .T2          .              .             1.0000         5.7010      
+K10  .K4   .T3          .              .             1.0000         5.7010      
+K10  .K4   .T4          .              .             1.0000         5.7010      
+K10  .K4   .T5          .              .             1.0000         5.7010      
+K10  .K4   .T6          .              .             1.0000         5.7010      
+K10  .K5   .T1          .              .             1.0000         3.6010      
+K10  .K5   .T2          .              .             1.0000         3.6010      
+K10  .K5   .T3          .              .             1.0000         3.6010      
+K10  .K5   .T4          .              .             1.0000         3.6010      
+K10  .K5   .T5          .              .             1.0000         3.6010      
+K10  .K5   .T6          .              .             1.0000         3.6010      
+K10  .K6   .T1          .              .             1.0000        11.7150      
+K10  .K6   .T2          .              .             1.0000        11.7150      
+K10  .K6   .T3          .              .             1.0000        11.7150      
+K10  .K6   .T4          .              .             1.0000        11.7150      
+K10  .K6   .T5          .              .             1.0000        11.7150      
+K10  .K6   .T6          .              .             1.0000        11.7150      
+K10  .K7   .T1          .              .             1.0000         8.5910      
+K10  .K7   .T2          .              .             1.0000         8.5910      
+K10  .K7   .T3          .              .             1.0000         8.5910      
+K10  .K7   .T4          .              .             1.0000         8.5910      
+K10  .K7   .T5          .              .             1.0000         8.5910      
+K10  .K7   .T6          .              .             1.0000         8.5910      
+K10  .K8   .T1          .              .             1.0000         7.4640      
+K10  .K8   .T2          .              .             1.0000         7.4640      
+K10  .K8   .T3          .              .             1.0000         7.4640      
+K10  .K8   .T4          .              .             1.0000         7.4640      
+K10  .K8   .T5          .              .             1.0000         7.4640      
+K10  .K8   .T6          .              .             1.0000         7.4640      
+K10  .K9   .T1          .              .             1.0000         1.7940      
+K10  .K9   .T2          .              .             1.0000         1.7940      
+K10  .K9   .T3          .              .             1.0000         1.7940      
+K10  .K9   .T4          .              .             1.0000         1.7940      
+K10  .K9   .T5          .              .             1.0000         1.7940      
+K10  .K9   .T6          .              .             1.0000         1.7940      
+K10  .K10  .T1          .              .             1.0000        99.0000      
+K10  .K10  .T2          .              .             1.0000        99.0000      
+K10  .K10  .T3          .              .             1.0000        99.0000      
+K10  .K10  .T4          .              .             1.0000        99.0000      
+K10  .K10  .T5          .              .             1.0000        99.0000      
+K10  .K10  .T6          .              .             1.0000        99.0000      
+
+---- VAR y  1 if customer i is fully supplied by transport vehicle k, otherwise 0
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1          .             1.0000         1.0000         EPS         
+depot.T2          .             1.0000         1.0000         EPS         
+depot.T3          .             1.0000         1.0000         EPS         
+depot.T4          .             1.0000         1.0000         EPS         
+depot.T5          .             1.0000         1.0000         EPS         
+depot.T6          .             1.0000         1.0000         EPS         
+K1   .T1          .              .             1.0000         EPS         
+K1   .T2          .              .             1.0000         EPS         
+K1   .T3          .              .             1.0000         EPS         
+K1   .T4          .              .             1.0000         EPS         
+K1   .T5          .             1.0000         1.0000         EPS         
+K1   .T6          .              .             1.0000         EPS         
+K2   .T1          .              .             1.0000         EPS         
+K2   .T2          .              .             1.0000         EPS         
+K2   .T3          .              .             1.0000         EPS         
+K2   .T4          .              .             1.0000         EPS         
+K2   .T5          .             1.0000         1.0000         EPS         
+K2   .T6          .              .             1.0000         EPS         
+K3   .T1          .              .             1.0000         EPS         
+K3   .T2          .              .             1.0000         EPS         
+K3   .T3          .              .             1.0000         EPS         
+K3   .T4          .             1.0000         1.0000         EPS         
+K3   .T5          .              .             1.0000         EPS         
+K3   .T6          .              .             1.0000         EPS         
+K4   .T1          .              .             1.0000         EPS         
+K4   .T2          .              .             1.0000         EPS         
+K4   .T3          .              .             1.0000         EPS         
+K4   .T4          .             1.0000         1.0000         EPS         
+K4   .T5          .              .             1.0000         EPS         
+K4   .T6          .              .             1.0000         EPS         
+K5   .T1          .              .             1.0000         EPS         
+K5   .T2          .             1.0000         1.0000         EPS         
+K5   .T3          .              .             1.0000         EPS         
+K5   .T4          .              .             1.0000         EPS         
+K5   .T5          .              .             1.0000         EPS         
+K5   .T6          .              .             1.0000         EPS         
+K6   .T1          .             1.0000         1.0000         EPS         
+K6   .T2          .              .             1.0000         EPS         
+K6   .T3          .              .             1.0000         EPS         
+K6   .T4          .              .             1.0000         EPS         
+K6   .T5          .              .             1.0000         EPS         
+K6   .T6          .              .             1.0000         EPS         
+K7   .T1          .             1.0000         1.0000         EPS         
+K7   .T2          .              .             1.0000         EPS         
+K7   .T3          .              .             1.0000         EPS         
+K7   .T4          .              .             1.0000         EPS         
+K7   .T5          .              .             1.0000         EPS         
+K7   .T6          .              .             1.0000         EPS         
+K8   .T1          .              .             1.0000         EPS         
+K8   .T2          .              .             1.0000         EPS         
+K8   .T3          .             1.0000         1.0000         EPS         
+K8   .T4          .              .             1.0000         EPS         
+K8   .T5          .              .             1.0000         EPS         
+K8   .T6          .              .             1.0000         EPS         
+K9   .T1          .              .             1.0000         EPS         
+K9   .T2          .              .             1.0000         EPS         
+K9   .T3          .              .             1.0000         EPS         
+K9   .T4          .              .             1.0000         EPS         
+K9   .T5          .              .             1.0000         EPS         
+K9   .T6          .             1.0000         1.0000         EPS         
+K10  .T1          .              .             1.0000         EPS         
+K10  .T2          .              .             1.0000         EPS         
+K10  .T3          .              .             1.0000         EPS         
+K10  .T4          .              .             1.0000         EPS         
+K10  .T5          .              .             1.0000         EPS         
+K10  .T6          .             1.0000         1.0000         EPS         
+
+---- VAR u  Additional variable for subtour elimination
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+depot.T1          .              .            +INF            EPS         
+depot.T2          .              .            +INF            EPS         
+depot.T3          .              .            +INF            EPS         
+depot.T4          .              .            +INF            EPS         
+depot.T5          .              .            +INF            EPS         
+depot.T6          .              .            +INF            EPS         
+K1   .T1          .            40.0000        +INF            EPS         
+K1   .T2          .            40.0000        +INF            EPS         
+K1   .T3          .            40.0000        +INF            EPS         
+K1   .T4          .           100.0000        +INF            EPS         
+K1   .T5          .            40.0000        +INF            EPS         
+K1   .T6          .            40.0000        +INF            EPS         
+K2   .T1          .            56.0000        +INF            EPS         
+K2   .T2          .            56.0000        +INF            EPS         
+K2   .T3          .            56.0000        +INF            EPS         
+K2   .T4          .            56.0000        +INF            EPS         
+K2   .T5          .            96.0000        +INF            EPS         
+K2   .T6          .            56.0000        +INF            EPS         
+K3   .T1          .            64.0000        +INF            EPS         
+K3   .T2          .            64.0000        +INF            EPS         
+K3   .T3          .            64.0000        +INF            EPS         
+K3   .T4          .            75.0000        +INF            EPS         
+K3   .T5          .            64.0000        +INF            EPS         
+K3   .T6          .            64.0000        +INF            EPS         
+K4   .T1          .            11.0000        +INF            EPS         
+K4   .T2          .            11.0000        +INF            EPS         
+K4   .T3          .            11.0000        +INF            EPS         
+K4   .T4          .            11.0000        +INF            EPS         
+K4   .T5          .            11.0000        +INF            EPS         
+K4   .T6          .            11.0000        +INF            EPS         
+K5   .T1          .            92.0000        +INF            EPS         
+K5   .T2          .            92.0000        +INF            EPS         
+K5   .T3          .            92.0000        +INF            EPS         
+K5   .T4          .            92.0000        +INF            EPS         
+K5   .T5          .            92.0000        +INF            EPS         
+K5   .T6          .            92.0000        +INF            EPS         
+K6   .T1          .            38.0000        +INF            EPS         
+K6   .T2          .            38.0000        +INF            EPS         
+K6   .T3          .            38.0000        +INF            EPS         
+K6   .T4          .            38.0000        +INF            EPS         
+K6   .T5          .            38.0000        +INF            EPS         
+K6   .T6          .            38.0000        +INF            EPS         
+K7   .T1          .            91.0000        +INF            EPS         
+K7   .T2          .            53.0000        +INF            EPS         
+K7   .T3          .            53.0000        +INF            EPS         
+K7   .T4          .            53.0000        +INF            EPS         
+K7   .T5          .            53.0000        +INF            EPS         
+K7   .T6          .            53.0000        +INF            EPS         
+K8   .T1          .            64.0000        +INF            EPS         
+K8   .T2          .            64.0000        +INF            EPS         
+K8   .T3          .            64.0000        +INF            EPS         
+K8   .T4          .            64.0000        +INF            EPS         
+K8   .T5          .            64.0000        +INF            EPS         
+K8   .T6          .            64.0000        +INF            EPS         
+K9   .T1          .             5.0000        +INF            EPS         
+K9   .T2          .             5.0000        +INF            EPS         
+K9   .T3          .             5.0000        +INF            EPS         
+K9   .T4          .             5.0000        +INF            EPS         
+K9   .T5          .             5.0000        +INF            EPS         
+K9   .T6          .             5.0000        +INF            EPS         
+K10  .T1          .            75.0000        +INF            EPS         
+K10  .T2          .            75.0000        +INF            EPS         
+K10  .T3          .            75.0000        +INF            EPS         
+K10  .T4          .            75.0000        +INF            EPS         
+K10  .T5          .            75.0000        +INF            EPS         
+K10  .T6          .            80.0000        +INF            EPS         
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR Z                 -INF          204.7060        +INF             .          
+
+  Z  target value as total sum of transport costs
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+
+
+EXECUTION TIME       =        0.796 SECONDS      4 MB  46.5.0 a671108d WEX-WEI
+
+
+USER: GAMS Community License for Asgard Mendoza      G240527|0002AO-GEN
+      INSTITUTO TECNOLOGICO Y DE EST. SUP. DE MONTERREY, IndustrCL15723
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      D:\asgar\WKMA2003S\Optimización Determinista\Testing for 11 nodes\01 CVRP - 11 Nodes.gms
+Output     D:\asgar\WKMA2003S\Optimización Determinista\Testing for 11 nodes\01 CVRP - 11 Nodes.lst
